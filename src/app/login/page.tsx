@@ -1,38 +1,22 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Coffee, Loader2, LogIn } from 'lucide-react';
+import { Coffee, Shield, User } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
+  async function loginAs(role: string) {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ role }),
     });
 
     if (res.ok) {
       const user = await res.json();
-      if (user.role === 'ADMIN') {
-        router.push('/hub-admin');
-      } else {
-        router.push('/hub-empleado');
-      }
-    } else {
-      setError('Contraseña incorrecta');
+      router.push(user.role === 'ADMIN' ? '/hub-admin' : '/hub-empleado');
     }
-
-    setLoading(false);
   }
 
   return (
@@ -46,42 +30,29 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-light-grey" style={{ fontFamily: 'var(--font-crimson)', letterSpacing: '-0.03em' }}>Sistema de gestión</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="card-wellness p-6"
-        >
-          {error && (
-            <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">
-              {error}
-            </div>
-          )}
-
-          <label className="mb-1.5 block text-sm font-medium text-grey">
-            Contraseña
-          </label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mb-6 w-full text-sm text-dark placeholder:text-light-grey"
-            placeholder="Introduce la contraseña"
-            autoFocus
-          />
+        <div className="card-wellness p-6 space-y-4">
+          <p className="text-center text-sm text-grey mb-4" style={{ fontFamily: 'var(--font-indie)' }}>Selecciona tu perfil</p>
 
           <button
-            type="submit"
-            disabled={loading}
-            className="btn-sage w-full text-sm"
+            onClick={() => loginAs('admin')}
+            className="btn-sage w-full flex items-center justify-center gap-3 py-4 text-base"
           >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <LogIn className="h-4 w-4" />
-            )}
-            {loading ? 'Ingresando...' : 'Iniciar sesión'}
+            <Shield className="h-5 w-5" />
+            Panel de Administración
           </button>
-        </form>
+
+          <button
+            onClick={() => loginAs('employee')}
+            className="w-full flex items-center justify-center gap-3 rounded-xl border-2 border-sage/30 bg-white py-4 text-base font-semibold text-dark hover:border-sage hover:bg-sage/5 transition-all"
+          >
+            <User className="h-5 w-5 text-sage" />
+            Portal de Empleado
+          </button>
+
+          <p className="mt-4 text-center text-xs text-light-grey" style={{ fontFamily: 'var(--font-hand)' }}>
+            acceso sin contraseña — uso interno
+          </p>
+        </div>
       </div>
     </div>
   );
