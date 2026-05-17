@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  name             String
+  email            String            @unique
+  password         String
+  role             String
+  isActive         Boolean           @default(true)
+  customFields     String            @default("{}")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  assignedShifts   ShiftAssignment[]
+  saleTransactions SaleTransaction[]
+  originalSwaps    ShiftSwap[]       @relation("originalUser")
+  replacementSwaps ShiftSwap[]       @relation("replacementUser")
+  shiftDebts       ShiftDebt[]
+}
+
+model Product {
+  id          Int        @id @default(autoincrement())
+  name        String
+  price       Float
+  tags        String
+  imageUrl    String     @default("")
+  description String     @default("")
+  isActive    Boolean    @default(true)
+  customFields String   @default("{}")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  protocol    Protocol?
+  inventory   Inventory?
+  saleItems   SaleItem[]
+}
+
+model Inventory {
+  id           Int      @id @default(autoincrement())
+  productId    Int      @unique
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stock        Int      @default(0)
+  minStock     Int      @default(5)
+  unit         String   @default("unidad")
+  customFields String   @default("{}")
+  updatedAt    DateTime @updatedAt
+}
+
+model Shift {
+  id          Int               @id @default(autoincrement())
+  name        String
+  startTime   String
+  endTime     String
+  daysOfWeek  String            @default("")
+  createdAt   DateTime          @default(now())
+  assignments ShiftAssignment[]
+}
+
+model ShiftAssignment {
+  id        Int        @id @default(autoincrement())
+  shiftId   Int
+  shift     Shift      @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String
+  role      String
+  createdAt DateTime   @default(now())
+  swaps     ShiftSwap[]
+}
+
+model ShiftSwap {
+  id                Int             @id @default(autoincrement())
+  originalUserId    Int
+  originalUser      User            @relation("originalUser", fields: [originalUserId], references: [id])
+  replacementUserId Int
+  replacementUser   User            @relation("replacementUser", fields: [replacementUserId], references: [id])
+  shiftAssignmentId Int
+  shiftAssignment   ShiftAssignment @relation(fields: [shiftAssignmentId], references: [id], onDelete: Cascade)
+  type              String
+  createdAt         DateTime        @default(now())
+}
+
+model ShiftDebt {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  reason    String
+  isPaid    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SaleTransaction {
+  id            Int        @id @default(autoincrement())
+  turnoId       Int        @default(0)
+  employeeId    Int?
+  employee      User?      @relation(fields: [employeeId], references: [id])
+  total         Float
+  paymentMethod String     @default("cash")
+  createdAt     DateTime   @default(now())
+  items         SaleItem[]
+}
+
+model SaleItem {
+  id          Int             @id @default(autoincrement())
+  saleId      Int
+  sale        SaleTransaction @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product         @relation(fields: [productId], references: [id])
+  productName String
+  price       Float
+  quantity    Int             @default(1)
+  priority    Int             @default(0)
+  status      String          @default("PENDING")
+  createdAt   DateTime        @default(now())
+}
+
+model Protocol {
+  id          Int                  @id @default(autoincrement())
+  type        String
+  name        String
+  description String               @default("")
+  steps       String
+  productId   Int?                 @unique
+  product     Product?             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  completions ProtocolCompletion[]
+}
+
+model ProtocolCompletion {
+  id          Int      @id @default(autoincrement())
+  protocolId  Int
+  protocol    Protocol @relation(fields: [protocolId], references: [id])
+  date        String
+  completedBy Int?
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
