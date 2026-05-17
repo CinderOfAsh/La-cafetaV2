@@ -1,0 +1,1203 @@
+{
+  "Product": [
+    {
+      "id": 1,
+      "name": "Cafe con leche peque\u00f1o",
+      "price": 1.2,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:36",
+      "updatedAt": "2026-05-14 22:22:36"
+    },
+    {
+      "id": 2,
+      "name": "Cafe con leche grande",
+      "price": 1.5,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:36",
+      "updatedAt": "2026-05-14 22:22:36"
+    },
+    {
+      "id": 3,
+      "name": "Cafe sin lactosa peque\u00f1o",
+      "price": 1.2,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:37",
+      "updatedAt": "2026-05-14 22:22:37"
+    },
+    {
+      "id": 4,
+      "name": "Cafe sin lactosa grande",
+      "price": 1.5,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:37",
+      "updatedAt": "2026-05-14 22:22:37"
+    },
+    {
+      "id": 5,
+      "name": "Cafe americano peque\u00f1o",
+      "price": 1.2,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:38",
+      "updatedAt": "2026-05-14 22:22:38"
+    },
+    {
+      "id": 6,
+      "name": "Cafe americano grande",
+      "price": 1.5,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:38",
+      "updatedAt": "2026-05-14 22:22:38"
+    },
+    {
+      "id": 7,
+      "name": "Cafe solo peque\u00f1o",
+      "price": 1.0,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:39",
+      "updatedAt": "2026-05-14 22:22:39"
+    },
+    {
+      "id": 8,
+      "name": "Cafe solo grande",
+      "price": 1.2,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:39",
+      "updatedAt": "2026-05-14 22:22:39"
+    },
+    {
+      "id": 9,
+      "name": "Espresso",
+      "price": 1.2,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:40",
+      "updatedAt": "2026-05-14 22:22:40"
+    },
+    {
+      "id": 10,
+      "name": "ColaCao",
+      "price": 1.5,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:41",
+      "updatedAt": "2026-05-14 22:22:41"
+    },
+    {
+      "id": 11,
+      "name": "ColaCao sin lactosa",
+      "price": 1.5,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:41",
+      "updatedAt": "2026-05-14 22:22:41"
+    },
+    {
+      "id": 12,
+      "name": "Cafe avena grande",
+      "price": 1.8,
+      "tags": "[\"cafe\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:42",
+      "updatedAt": "2026-05-14 22:22:42"
+    },
+    {
+      "id": 13,
+      "name": "Sandwich pavo y queso",
+      "price": 2.5,
+      "tags": "[\"comida\",\"bocadillo\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:42",
+      "updatedAt": "2026-05-14 22:22:42"
+    },
+    {
+      "id": 14,
+      "name": "Bocata lomo y queso",
+      "price": 4.0,
+      "tags": "[\"comida\",\"bocadillo\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:43",
+      "updatedAt": "2026-05-14 22:22:43"
+    },
+    {
+      "id": 15,
+      "name": "Bocata jam\u00f3n",
+      "price": 3.5,
+      "tags": "[\"comida\",\"bocadillo\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:43",
+      "updatedAt": "2026-05-14 22:22:43"
+    },
+    {
+      "id": 16,
+      "name": "Bocata tortilla",
+      "price": 4.0,
+      "tags": "[\"comida\",\"bocadillo\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:44",
+      "updatedAt": "2026-05-14 22:22:44"
+    },
+    {
+      "id": 17,
+      "name": "Croissant pavo y queso",
+      "price": 2.5,
+      "tags": "[\"comida\",\"bocadillo\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:44",
+      "updatedAt": "2026-05-14 22:22:44"
+    },
+    {
+      "id": 18,
+      "name": "Croissant a la plancha",
+      "price": 1.5,
+      "tags": "[\"comida\",\"bocadillo\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:45",
+      "updatedAt": "2026-05-14 22:22:45"
+    },
+    {
+      "id": 19,
+      "name": "Bocadillo lomo aceite y tomate",
+      "price": 4.0,
+      "tags": "[\"comida\",\"bocadillo\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:46",
+      "updatedAt": "2026-05-14 22:22:46"
+    },
+    {
+      "id": 20,
+      "name": "Tostada jam\u00f3n",
+      "price": 2.0,
+      "tags": "[\"comida\",\"tostada\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:47",
+      "updatedAt": "2026-05-14 22:22:47"
+    },
+    {
+      "id": 21,
+      "name": "Tostada tomate y aceite",
+      "price": 1.5,
+      "tags": "[\"comida\",\"tostada\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:47",
+      "updatedAt": "2026-05-14 22:22:47"
+    },
+    {
+      "id": 22,
+      "name": "Tostada mantequilla y mermelada",
+      "price": 1.2,
+      "tags": "[\"comida\",\"tostada\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:48",
+      "updatedAt": "2026-05-14 22:22:48"
+    },
+    {
+      "id": 23,
+      "name": "Pincho tortilla",
+      "price": 1.5,
+      "tags": "[\"comida\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:48",
+      "updatedAt": "2026-05-14 22:22:48"
+    },
+    {
+      "id": 24,
+      "name": "Gofre",
+      "price": 2.0,
+      "tags": "[\"comida\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:49",
+      "updatedAt": "2026-05-14 22:22:49"
+    },
+    {
+      "id": 25,
+      "name": "Pizza",
+      "price": 2.5,
+      "tags": "[\"comida\",\"caliente\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:49",
+      "updatedAt": "2026-05-14 22:22:49"
+    },
+    {
+      "id": 26,
+      "name": "Pack desayuno sandwich",
+      "price": 3.5,
+      "tags": "[\"comida\",\"pack\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:50",
+      "updatedAt": "2026-05-14 22:22:50"
+    },
+    {
+      "id": 27,
+      "name": "Pack desayuno tostada",
+      "price": 2.5,
+      "tags": "[\"comida\",\"pack\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:51",
+      "updatedAt": "2026-05-14 22:22:51"
+    },
+    {
+      "id": 28,
+      "name": "Pack dulce",
+      "price": 2.0,
+      "tags": "[\"comida\",\"pack\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:51",
+      "updatedAt": "2026-05-14 22:22:51"
+    },
+    {
+      "id": 29,
+      "name": "Pack comida lomo",
+      "price": 5.0,
+      "tags": "[\"comida\",\"pack\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:52",
+      "updatedAt": "2026-05-14 22:22:52"
+    },
+    {
+      "id": 30,
+      "name": "Pack comida tortilla",
+      "price": 4.5,
+      "tags": "[\"comida\",\"pack\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:52",
+      "updatedAt": "2026-05-14 22:22:52"
+    },
+    {
+      "id": 31,
+      "name": "Pack TLS",
+      "price": 3.5,
+      "tags": "[\"comida\",\"pack\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:53",
+      "updatedAt": "2026-05-14 22:22:53"
+    },
+    {
+      "id": 32,
+      "name": "Agua",
+      "price": 1.0,
+      "tags": "[\"bebida\",\"frio\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:53",
+      "updatedAt": "2026-05-14 22:22:53"
+    },
+    {
+      "id": 33,
+      "name": "Coca Cola",
+      "price": 1.5,
+      "tags": "[\"bebida\",\"frio\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:54",
+      "updatedAt": "2026-05-14 22:22:54"
+    },
+    {
+      "id": 34,
+      "name": "Coca Cola Zero",
+      "price": 1.5,
+      "tags": "[\"bebida\",\"frio\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:54",
+      "updatedAt": "2026-05-14 22:22:54"
+    },
+    {
+      "id": 35,
+      "name": "Cerveza",
+      "price": 2.0,
+      "tags": "[\"bebida\",\"frio\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:55",
+      "updatedAt": "2026-05-14 22:22:55"
+    },
+    {
+      "id": 36,
+      "name": "Nestea",
+      "price": 1.5,
+      "tags": "[\"bebida\",\"frio\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:56",
+      "updatedAt": "2026-05-14 22:22:56"
+    },
+    {
+      "id": 37,
+      "name": "Aquarius lim\u00f3n",
+      "price": 1.5,
+      "tags": "[\"bebida\",\"frio\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:56",
+      "updatedAt": "2026-05-14 22:22:56"
+    },
+    {
+      "id": 38,
+      "name": "Fanta naranja",
+      "price": 1.5,
+      "tags": "[\"bebida\",\"frio\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:57",
+      "updatedAt": "2026-05-14 22:22:57"
+    },
+    {
+      "id": 39,
+      "name": "Redbull sin azucar",
+      "price": 2.5,
+      "tags": "[\"bebida\",\"energy\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:57",
+      "updatedAt": "2026-05-14 22:22:57"
+    },
+    {
+      "id": 40,
+      "name": "Redbull naranja",
+      "price": 2.5,
+      "tags": "[\"bebida\",\"energy\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:58",
+      "updatedAt": "2026-05-14 22:22:58"
+    },
+    {
+      "id": 41,
+      "name": "Redbull blanco",
+      "price": 2.5,
+      "tags": "[\"bebida\",\"energy\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:59",
+      "updatedAt": "2026-05-14 22:22:59"
+    },
+    {
+      "id": 42,
+      "name": "Galleta",
+      "price": 0.5,
+      "tags": "[\"snack\",\"dulce\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:59",
+      "updatedAt": "2026-05-14 22:22:59"
+    },
+    {
+      "id": 43,
+      "name": "Huesitos",
+      "price": 1.0,
+      "tags": "[\"snack\",\"dulce\"]",
+      "imageUrl": "",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:23:00",
+      "updatedAt": "2026-05-14 22:23:00"
+    },
+    {
+      "id": 44,
+      "name": "Barrita proteinas",
+      "price": 1.5,
+      "tags": "[\"snack\",\"dulce\"]",
+      "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUkB7TuHBD15BwtOUl-i7976vCUBzlDEVbb-T2k3XtKXHzdgR683EgFxFWC-ctK1qcszSWq6ZJhnVYilfJTV43GdJGDGGhR97HsBBSRRvi&s=10",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:23:00",
+      "updatedAt": "2026-05-17T11:30:51.435+00:00"
+    },
+    {
+      "id": 45,
+      "name": "Te",
+      "price": 1.2,
+      "tags": "[\"bebida\",\"caliente\"]",
+      "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUkB7TuHBD15BwtOUl-i7976vCUBzlDEVbb-T2k3XtKXHzdgR683EgFxFWC-ctK1qcszSWq6ZJhnVYilfJTV43GdJGDGGhR97HsBBSRRvi&s=10",
+      "description": "",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:23:01",
+      "updatedAt": "2026-05-17T11:33:42.345+00:00"
+    }
+  ],
+  "Inventory": [
+    {
+      "id": 1,
+      "productId": 1,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:36"
+    },
+    {
+      "id": 2,
+      "productId": 2,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:37"
+    },
+    {
+      "id": 3,
+      "productId": 3,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:37"
+    },
+    {
+      "id": 4,
+      "productId": 4,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:38"
+    },
+    {
+      "id": 5,
+      "productId": 5,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:38"
+    },
+    {
+      "id": 6,
+      "productId": 6,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:39"
+    },
+    {
+      "id": 7,
+      "productId": 7,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:39"
+    },
+    {
+      "id": 8,
+      "productId": 8,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:40"
+    },
+    {
+      "id": 9,
+      "productId": 9,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:40"
+    },
+    {
+      "id": 10,
+      "productId": 10,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:41"
+    },
+    {
+      "id": 11,
+      "productId": 11,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:41"
+    },
+    {
+      "id": 12,
+      "productId": 12,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:42"
+    },
+    {
+      "id": 13,
+      "productId": 13,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:42"
+    },
+    {
+      "id": 14,
+      "productId": 14,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:43"
+    },
+    {
+      "id": 15,
+      "productId": 15,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:44"
+    },
+    {
+      "id": 16,
+      "productId": 16,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:44"
+    },
+    {
+      "id": 17,
+      "productId": 17,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:45"
+    },
+    {
+      "id": 18,
+      "productId": 18,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:45"
+    },
+    {
+      "id": 19,
+      "productId": 19,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:46"
+    },
+    {
+      "id": 20,
+      "productId": 20,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:47"
+    },
+    {
+      "id": 21,
+      "productId": 21,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:47"
+    },
+    {
+      "id": 22,
+      "productId": 22,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:48"
+    },
+    {
+      "id": 23,
+      "productId": 23,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:49"
+    },
+    {
+      "id": 24,
+      "productId": 24,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:49"
+    },
+    {
+      "id": 25,
+      "productId": 25,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:50"
+    },
+    {
+      "id": 26,
+      "productId": 26,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:50"
+    },
+    {
+      "id": 27,
+      "productId": 27,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:51"
+    },
+    {
+      "id": 28,
+      "productId": 28,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:52"
+    },
+    {
+      "id": 29,
+      "productId": 29,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:52"
+    },
+    {
+      "id": 30,
+      "productId": 30,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:53"
+    },
+    {
+      "id": 31,
+      "productId": 31,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:53"
+    },
+    {
+      "id": 32,
+      "productId": 32,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:54"
+    },
+    {
+      "id": 33,
+      "productId": 33,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:54"
+    },
+    {
+      "id": 34,
+      "productId": 34,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:55"
+    },
+    {
+      "id": 35,
+      "productId": 35,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:56"
+    },
+    {
+      "id": 36,
+      "productId": 36,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:56"
+    },
+    {
+      "id": 37,
+      "productId": 37,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:56"
+    },
+    {
+      "id": 38,
+      "productId": 38,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:57"
+    },
+    {
+      "id": 39,
+      "productId": 39,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:58"
+    },
+    {
+      "id": 40,
+      "productId": 40,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:58"
+    },
+    {
+      "id": 41,
+      "productId": 41,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:59"
+    },
+    {
+      "id": 42,
+      "productId": 42,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:22:59"
+    },
+    {
+      "id": 43,
+      "productId": 43,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:23:00"
+    },
+    {
+      "id": 44,
+      "productId": 44,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:23:00"
+    },
+    {
+      "id": 45,
+      "productId": 45,
+      "stock": 20,
+      "minStock": 5,
+      "unit": "unidad",
+      "customFields": "{}",
+      "updatedAt": "2026-05-14 22:23:01"
+    }
+  ],
+  "Shift": [
+    {
+      "id": 31,
+      "name": "Ma\u00f1ana",
+      "startTime": "09:00",
+      "endTime": "13:00",
+      "daysOfWeek": "1,2,3,4,5",
+      "createdAt": "2026-05-14 22:23:01"
+    },
+    {
+      "id": 32,
+      "name": "Ma\u00f1ana Corta",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "daysOfWeek": "2,4",
+      "createdAt": "2026-05-14 22:23:02"
+    },
+    {
+      "id": 33,
+      "name": "Mediod\u00eda",
+      "startTime": "12:00",
+      "endTime": "15:00",
+      "daysOfWeek": "2,4",
+      "createdAt": "2026-05-14 22:23:02"
+    },
+    {
+      "id": 34,
+      "name": "Tarde",
+      "startTime": "13:00",
+      "endTime": "17:00",
+      "daysOfWeek": "1,3",
+      "createdAt": "2026-05-14 22:23:02"
+    },
+    {
+      "id": 35,
+      "name": "Tarde Corta",
+      "startTime": "15:00",
+      "endTime": "17:00",
+      "daysOfWeek": "2",
+      "createdAt": "2026-05-14 22:23:03"
+    },
+    {
+      "id": 36,
+      "name": "Tarde Larga",
+      "startTime": "15:00",
+      "endTime": "19:00",
+      "daysOfWeek": "4",
+      "createdAt": "2026-05-14 22:23:03"
+    }
+  ],
+  "User": [
+    {
+      "id": 1,
+      "name": "Administrador",
+      "email": "admin@lacafeta.com",
+      "role": "ADMIN",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:27",
+      "updatedAt": "2026-05-14 22:22:27"
+    },
+    {
+      "id": 2,
+      "name": "Adri",
+      "email": "adri@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:28",
+      "updatedAt": "2026-05-14 22:22:28"
+    },
+    {
+      "id": 3,
+      "name": "Kawtar",
+      "email": "kawtar@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:28",
+      "updatedAt": "2026-05-14 22:22:28"
+    },
+    {
+      "id": 4,
+      "name": "Canario",
+      "email": "canario@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:29",
+      "updatedAt": "2026-05-14 22:22:29"
+    },
+    {
+      "id": 5,
+      "name": "Aitana",
+      "email": "aitana@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:29",
+      "updatedAt": "2026-05-14 22:22:29"
+    },
+    {
+      "id": 6,
+      "name": "Claudia",
+      "email": "claudia@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:29",
+      "updatedAt": "2026-05-14 22:22:29"
+    },
+    {
+      "id": 7,
+      "name": "M\u00e1laga",
+      "email": "m\u00e1laga@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:29",
+      "updatedAt": "2026-05-14 22:22:29"
+    },
+    {
+      "id": 8,
+      "name": "Luca",
+      "email": "luca@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:30",
+      "updatedAt": "2026-05-14 22:22:30"
+    },
+    {
+      "id": 9,
+      "name": "Sof\u00eda",
+      "email": "sof\u00eda@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:30",
+      "updatedAt": "2026-05-14 22:22:30"
+    },
+    {
+      "id": 10,
+      "name": "El\u00edas",
+      "email": "el\u00edas@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:30",
+      "updatedAt": "2026-05-14 22:22:30"
+    },
+    {
+      "id": 11,
+      "name": "Villasante",
+      "email": "villasante@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:31",
+      "updatedAt": "2026-05-14 22:22:31"
+    },
+    {
+      "id": 12,
+      "name": "Jose G",
+      "email": "joseg@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:31",
+      "updatedAt": "2026-05-14 22:22:31"
+    },
+    {
+      "id": 13,
+      "name": "\u00c1ngel",
+      "email": "\u00e1ngel@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:31",
+      "updatedAt": "2026-05-14 22:22:31"
+    },
+    {
+      "id": 14,
+      "name": "Diego S",
+      "email": "diegos@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:31",
+      "updatedAt": "2026-05-14 22:22:31"
+    },
+    {
+      "id": 15,
+      "name": "Bakr",
+      "email": "bakr@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:32",
+      "updatedAt": "2026-05-14 22:22:32"
+    },
+    {
+      "id": 16,
+      "name": "Abrey",
+      "email": "abrey@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:32",
+      "updatedAt": "2026-05-14 22:22:32"
+    },
+    {
+      "id": 17,
+      "name": "Vittorio",
+      "email": "vittorio@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:32",
+      "updatedAt": "2026-05-14 22:22:32"
+    },
+    {
+      "id": 18,
+      "name": "Lastra",
+      "email": "lastra@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:35",
+      "updatedAt": "2026-05-14 22:22:35"
+    },
+    {
+      "id": 19,
+      "name": "Spark 1",
+      "email": "spark1@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:35",
+      "updatedAt": "2026-05-14 22:22:35"
+    },
+    {
+      "id": 20,
+      "name": "Spark 2",
+      "email": "spark2@lacafeta.com",
+      "role": "EMPLOYEE",
+      "isActive": 1,
+      "customFields": "{}",
+      "createdAt": "2026-05-14 22:22:36",
+      "updatedAt": "2026-05-14 22:22:36"
+    }
+  ]
+}

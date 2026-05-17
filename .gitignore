@@ -7,3 +7,5 @@ node_modules/
 .env.*.local
 .next/
 out/
+!src/lib/seed-data.json
+!public/seed-data.json
