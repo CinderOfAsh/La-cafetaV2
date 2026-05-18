@@ -11,6 +11,9 @@ export async function GET(
     where: { id: parseInt(id) },
     include: {
       inventory: { select: { stock: true, minStock: true, unit: true } },
+      recipes: {
+        include: { rawMaterial: true },
+      },
     },
   });
 
@@ -54,6 +57,7 @@ export async function DELETE(
   await prisma.saleItem.deleteMany({ where: { productId: parseInt(id) } });
   await prisma.protocol.deleteMany({ where: { productId: parseInt(id) } });
   await prisma.inventory.deleteMany({ where: { productId: parseInt(id) } });
+  await prisma.productRecipe.deleteMany({ where: { productId: parseInt(id) } });
   // Then delete the product
   await prisma.product.delete({
     where: { id: parseInt(id) },

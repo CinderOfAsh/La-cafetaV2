@@ -62,6 +62,36 @@ async function main() {
   }
   console.log(shifts.length + " shifts");
 
+  // Raw Materials
+  const rawMats = [
+    ["Café en grano", "kg", 5, 2],
+    ["Leche entera", "L", 10, 5],
+    ["Leche sin lactosa", "L", 5, 3],
+    ["Leche de avena", "L", 3, 2],
+    ["Harina", "kg", 10, 5],
+    ["Huevos", "unidad", 30, 12],
+    ["Aceite de oliva", "L", 5, 2],
+    ["Tomate triturado", "kg", 3, 2],
+    ["Jamón", "kg", 2, 1],
+    ["Lomo", "kg", 2, 1],
+    ["Queso", "kg", 3, 1],
+    ["Pan de molde", "paquete", 8, 4],
+    ["Barra de pan", "unidad", 10, 5],
+    ["Azúcar", "kg", 5, 2],
+    ["ColaCao en polvo", "kg", 2, 1],
+    ["Redbull", "unidad", 24, 12],
+    ["Coca Cola", "unidad", 48, 24],
+    ["Agua mineral", "unidad", 48, 24],
+    ["Galletas", "paquete", 12, 6],
+    ["Huesitos", "unidad", 20, 10],
+    ["Pizza congelada", "unidad", 10, 5],
+    ["Gofres congelados", "unidad", 10, 5],
+  ];
+  for (const [name, unit, stock, minStock] of rawMats) {
+    await db.execute("INSERT INTO RawMaterial (name, unit, stock, minStock, createdAt, updatedAt) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))", [name, unit, stock, minStock]);
+  }
+  console.log(rawMats.length + " raw materials");
+
   console.log("✅ Done!");
 }
 

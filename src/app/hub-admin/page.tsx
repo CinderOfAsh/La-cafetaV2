@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Package, Users, ClipboardCheck, BarChart3, Coffee, LogOut, Beaker } from 'lucide-react';
+import { Package, Users, ClipboardCheck, BarChart3, Coffee, LogOut, Beaker, Wheat } from 'lucide-react';
 
 const cards = [
   { label: 'Productos', href: '/admin/productos', icon: Package, desc: 'Gestionar productos e inventario' },
+  { label: 'Materias Primas', href: '/admin/materias-primas', icon: Wheat, desc: 'Stock de ingredientes y materiales' },
   { label: 'Gestión de Personal', href: '/admin/personal', icon: Users, desc: 'Empleados y turnos' },
   { label: 'Protocolos', href: '/admin/protocolos', icon: ClipboardCheck, desc: 'Apertura, cierre y productos' },
   { label: 'Dashboard', href: '/admin/dashboard', icon: BarChart3, desc: 'Estadísticas y métricas' },

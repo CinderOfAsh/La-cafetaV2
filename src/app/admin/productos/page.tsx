@@ -54,6 +54,9 @@ export default function AdminProductosPage() {
   const [editMin, setEditMin] = useState('');
   const [invCustomFields, setInvCustomFields] = useState<CustomField[]>([]);
 
+  const [recipeMaterials, setRecipeMaterials] = useState<{ rawMaterialId: number; quantity: number }[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<{ id: number; name: string; stock: number; unit: string }[]>([]);
+
   const [showCocinaModal, setShowCocinaModal] = useState(false);
   const [cocinaProductId, setCocinaProductId] = useState<number | null>(null);
   const [cocinaProductName, setCocinaProductName] = useState('');
@@ -74,10 +77,12 @@ export default function AdminProductosPage() {
     Promise.all([
       fetch('/api/products').then((r) => r.json()),
       fetch('/api/inventory').then((r) => r.json()),
+      fetch('/api/raw-materials').then((r) => r.json()),
     ])
-      .then(([p, i]) => {
+      .then(([p, i, rm]) => {
         setProducts(p);
         setInvItems(i);
+        setRawMaterials(rm);
       })
       .finally(() => setLoading(false));
   }
@@ -88,6 +93,7 @@ export default function AdminProductosPage() {
     setEditing(null);
     setForm({ name: '', price: '', tags: '', description: '', imageUrl: '' });
     setCustomFields([]);
+    setRecipeMaterials([]);
     setShowForm(true);
     setError('');
   }
@@ -96,6 +102,7 @@ export default function AdminProductosPage() {
     setEditing(p);
     const parsedTags = (() => { try { return JSON.parse(p.tags).join(', '); } catch { return p.tags; } })();
     setForm({ name: p.name, price: String(p.price), tags: parsedTags, description: p.description, imageUrl: p.imageUrl });
+    setRecipeMaterials((p as any).recipes?.map((r: any) => ({ rawMaterialId: r.rawMaterialId, quantity: r.quantity })) || []);
     try {
       const cf = JSON.parse(p.customFields || '{}');
       setCustomFields(typeof cf === 'object' && cf !== null && !Array.isArray(cf) ? Object.entries(cf).map(([key, value]) => ({ key, value: String(value) })) : []);
@@ -132,6 +139,26 @@ export default function AdminProductosPage() {
     });
 
     if (res.ok) {
+      const saved = await res.json();
+
+      // Sync recipes if editing and there are recipe materials
+      if (editing && recipeMaterials.length > 0) {
+        // Delete existing recipes and re-create
+        const validRecipes = recipeMaterials.filter((rm) => rm.rawMaterialId > 0);
+        await fetch(`/api/products/${editing.id}/recipes`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rawMaterialId: 0 }),
+        });
+        for (const rm of validRecipes) {
+          await fetch(`/api/products/${editing.id}/recipes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rawMaterialId: rm.rawMaterialId, quantity: rm.quantity }),
+          });
+        }
+      }
+
       toast(editing ? '✅ Producto actualizado' : '✅ Producto guardado');
       setShowForm(false);
       loadData();
@@ -361,6 +388,48 @@ export default function AdminProductosPage() {
                     ))}
                   </div>
                 </div>
+
+                {editing && (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="text-sm text-light-grey">Materias Primas (receta)</label>
+                      <button type="button" onClick={() => setRecipeMaterials((prev) => [...prev, { rawMaterialId: 0, quantity: 1 }])} className="flex items-center gap-1 text-xs text-sage hover:text-dark">
+                        <Plus className="h-3 w-3" /> Añadir ingrediente
+                      </button>
+                    </div>
+                    {recipeMaterials.length === 0 && (
+                      <p className="text-xs text-light-grey">Este producto no tiene materias primas asociadas</p>
+                    )}
+                    <div className="space-y-2">
+                      {recipeMaterials.map((rm, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <select
+                            value={rm.rawMaterialId}
+                            onChange={(e) => setRecipeMaterials((prev) => prev.map((x, j) => j === i ? { ...x, rawMaterialId: parseInt(e.target.value) } : x))}
+                            className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark"
+                          >
+                            <option value={0}>Seleccionar materia prima...</option>
+                            {rawMaterials.map((mat) => (
+                              <option key={mat.id} value={mat.id}>{mat.name} ({mat.stock} {mat.unit})</option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            value={rm.quantity}
+                            onChange={(e) => setRecipeMaterials((prev) => prev.map((x, j) => j === i ? { ...x, quantity: parseFloat(e.target.value) || 1 } : x))}
+                            className="w-20 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark"
+                            placeholder="Cant."
+                          />
+                          <button type="button" onClick={() => setRecipeMaterials((prev) => prev.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <button type="submit" className="btn-sage text-sm">

@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
     where,
     include: {
       inventory: { select: { stock: true, minStock: true, unit: true } },
+      recipes: {
+        include: { rawMaterial: true },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
