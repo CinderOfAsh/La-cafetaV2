@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DollarSign, ShoppingCart, Banknote, CreditCard, Clock, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { DollarSign, ShoppingCart, Banknote, CreditCard, Clock, Download, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react';
 import { downloadCsv } from '@/lib/export-csv';
 
 interface ShiftEntry {
@@ -36,11 +36,20 @@ export default function TurnoDashboardPage() {
   const [stats, setStats] = useState<MyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedShift, setExpandedShift] = useState<number | null>(null);
+  const [hourlyData, setHourlyData] = useState<{ hour: string; total: number; cash: number; card: number; count: number; products: { name: string; qty: number; total: number }[] }[]>([]);
+  const [hourlyTotals, setHourlyTotals] = useState<{ total: number; cash: number; card: number; count: number } | null>(null);
+  const [expandedHour, setExpandedHour] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/dashboard/my-stats')
-      .then((r) => r.json())
-      .then(setStats)
+    Promise.all([
+      fetch('/api/dashboard/my-stats').then((r) => r.json()),
+      fetch('/api/dashboard/hourly-sales').then((r) => r.json()),
+    ])
+      .then(([statsRes, hourlyRes]) => {
+        setStats(statsRes);
+        setHourlyData(hourlyRes.hourly || []);
+        setHourlyTotals(hourlyRes.totals);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -103,6 +112,60 @@ export default function TurnoDashboardPage() {
           <p className="mt-1 text-xs text-light-grey">{cardPct.toFixed(0)}% del total</p>
         </div>
       </div>
+
+      {/* Hourly breakdown */}
+      {hourlyData.length > 0 && (
+        <div className="mb-8 card-wellness p-5 reveal">
+          <div className="mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-sage" />
+            <h3 className="font-semibold text-dark">Ventas por hora</h3>
+          </div>
+          <div className="space-y-2">
+            {hourlyData.map((h) => (
+              <div key={h.hour} className="overflow-hidden rounded-lg border border-dark/10">
+                <button
+                  onClick={() => setExpandedHour(expandedHour === h.hour ? null : h.hour)}
+                  className="flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-dark/5"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-8 w-14 items-center justify-center rounded-lg bg-sage-light text-xs font-semibold text-sage">{h.hour}</span>
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="text-muted">{h.count} venta{h.count > 1 ? 's' : ''}</span>
+                      <span className="font-medium text-dark">{h.total.toFixed(2)}€</span>
+                      <span className="text-xs text-muted">
+                        E: {h.cash.toFixed(2)}€ · T: {h.card.toFixed(2)}€
+                      </span>
+                    </div>
+                  </div>
+                  {expandedHour === h.hour ? <ChevronUp className="h-4 w-4 text-muted" /> : <ChevronDown className="h-4 w-4 text-muted" />}
+                </button>
+                {expandedHour === h.hour && (
+                  <div className="border-t border-dark/10 bg-dark/5 px-4 py-3">
+                    {h.products.length === 0 ? (
+                      <p className="text-sm text-muted">Sin productos</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {h.products.sort((a, b) => b.qty - a.qty).map((p, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm">
+                            <span className="text-dark">{p.name}</span>
+                            <span className="text-muted">{p.qty}x · {p.total.toFixed(2)}€</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {hourlyTotals && (
+            <div className="mt-3 flex items-center justify-between border-t border-dark/10 pt-3 text-sm font-medium">
+              <span className="text-muted">Total: {hourlyTotals.count} ventas</span>
+              <span className="text-dark">Efectivo: {hourlyTotals.cash.toFixed(2)}€ · Tarjeta: {hourlyTotals.card.toFixed(2)}€ · Total: {hourlyTotals.total.toFixed(2)}€</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {(stats.firstSale || stats.lastSale) && (
         <div className="mb-8 flex items-center gap-4 card-wellness p-4 reveal">

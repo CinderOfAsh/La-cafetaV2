@@ -25,6 +25,8 @@ interface Shift {
   startTime: string;
   endTime: string;
   daysOfWeek: string;
+  openingProtocol?: string;
+  closingProtocol?: string;
   assignments: { id: number; date: string; role: string; user: { id: number; name: string } }[];
 }
 
@@ -64,6 +66,8 @@ export default function AdminPersonalPage() {
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('14:00');
   const [daysChecked, setDaysChecked] = useState<boolean[]>([false, true, true, true, true, true, false]);
+  const [openingProtocol, setOpeningProtocol] = useState<string[]>(['']);
+  const [closingProtocol, setClosingProtocol] = useState<string[]>(['']);
 
   const [debts, setDebts] = useState<{ id: number; userId: number; reason: string; isPaid: boolean; createdAt: string; user: { id: number; name: string } }[]>([]);
   const [showDebtModal, setShowDebtModal] = useState(false);
@@ -123,7 +127,11 @@ export default function AdminPersonalPage() {
 
   async function handleShiftSubmit(e: React.FormEvent) {
     e.preventDefault(); setError('');
-    const body = { name: shiftName, startTime, endTime, daysOfWeek: daysToString(daysChecked) };
+    const body = {
+      name: shiftName, startTime, endTime, daysOfWeek: daysToString(daysChecked),
+      openingProtocol: JSON.stringify(openingProtocol.filter(s => s.trim())),
+      closingProtocol: JSON.stringify(closingProtocol.filter(s => s.trim())),
+    };
     const url = editingShift ? `/api/shifts/${editingShift.id}` : '/api/shifts';
     const method = editingShift ? 'PUT' : 'POST';
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -143,6 +151,7 @@ export default function AdminPersonalPage() {
     setEditingShift(null);
     setShiftName(''); setStartTime('08:00'); setEndTime('14:00');
     setDaysChecked([false, true, true, true, true, true, false]);
+    setOpeningProtocol(['']); setClosingProtocol(['']);
     setShowShiftForm(true); setError('');
   }
 
@@ -150,6 +159,11 @@ export default function AdminPersonalPage() {
     setEditingShift(s);
     setShiftName(s.name); setStartTime(s.startTime); setEndTime(s.endTime);
     setDaysChecked(stringToDays(s.daysOfWeek));
+    let p, c;
+    try { p = JSON.parse(s.openingProtocol || '[]'); } catch { p = []; }
+    try { c = JSON.parse(s.closingProtocol || '[]'); } catch { c = []; }
+    setOpeningProtocol(p.length > 0 ? p : ['']);
+    setClosingProtocol(c.length > 0 ? c : ['']);
     setShowShiftForm(true); setError('');
   }
 
@@ -324,6 +338,34 @@ export default function AdminPersonalPage() {
                     ))}
                   </div>
                 </div>
+                <details className="rounded-lg border border-dark/10 p-3">
+                  <summary className="cursor-pointer text-sm font-medium text-dark">Protocolo de apertura</summary>
+                  <div className="mt-3 space-y-2">
+                    {openingProtocol.map((step, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sage-light text-[10px] text-sage">{i + 1}</span>
+                        <input value={step} onChange={(e) => setOpeningProtocol((prev) => prev.map((s, j) => j === i ? e.target.value : s))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark" placeholder={`Paso ${i + 1}`} />
+                        {openingProtocol.length > 1 && <button type="button" onClick={() => setOpeningProtocol((prev) => prev.filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setOpeningProtocol((prev) => [...prev, ''])} className="flex items-center gap-1 text-xs text-sage hover:text-dark"><Plus className="h-3 w-3" /> Añadir paso</button>
+                  </div>
+                </details>
+
+                <details className="rounded-lg border border-dark/10 p-3">
+                  <summary className="cursor-pointer text-sm font-medium text-dark">Protocolo de cierre</summary>
+                  <div className="mt-3 space-y-2">
+                    {closingProtocol.map((step, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-[10px] text-amber-600">{i + 1}</span>
+                        <input value={step} onChange={(e) => setClosingProtocol((prev) => prev.map((s, j) => j === i ? e.target.value : s))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark" placeholder={`Paso ${i + 1}`} />
+                        {closingProtocol.length > 1 && <button type="button" onClick={() => setClosingProtocol((prev) => prev.filter((_, j) => j !== i))} className="text-red-500 hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setClosingProtocol((prev) => [...prev, ''])} className="flex items-center gap-1 text-xs text-sage hover:text-dark"><Plus className="h-3 w-3" /> Añadir paso</button>
+                  </div>
+                </details>
+
                 <div className="flex gap-2"><button type="submit" className="btn-sage text-sm">{editingShift ? 'Actualizar' : 'Crear'}</button><button type="button" onClick={() => setShowShiftForm(false)} className="rounded-lg border border-dark/10 px-4 py-2 text-sm text-grey hover:bg-dark/5">Cancelar</button></div>
               </form>
             </div>

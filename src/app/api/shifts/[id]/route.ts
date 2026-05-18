@@ -7,7 +7,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { name, startTime, endTime, daysOfWeek } = await request.json();
+  const { name, startTime, endTime, daysOfWeek, openingProtocol, closingProtocol } = await request.json();
 
   const shift = await prisma.shift.update({
     where: { id: parseInt(id) },
@@ -16,6 +16,8 @@ export async function PUT(
       ...(startTime !== undefined && { startTime }),
       ...(endTime !== undefined && { endTime }),
       ...(daysOfWeek !== undefined && { daysOfWeek }),
+      ...(openingProtocol !== undefined && { openingProtocol }),
+      ...(closingProtocol !== undefined && { closingProtocol }),
     },
   });
 

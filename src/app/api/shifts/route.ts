@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
         startTime: body.startTime,
         endTime: body.endTime,
         daysOfWeek: body.daysOfWeek || "",
+        openingProtocol: body.openingProtocol || "[]",
+        closingProtocol: body.closingProtocol || "[]",
       },
     });
     return Response.json(shift, { status: 201 });

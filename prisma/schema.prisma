@@ -52,13 +52,15 @@ model Inventory {
 }
 
 model Shift {
-  id          Int               @id @default(autoincrement())
-  name        String
-  startTime   String
-  endTime     String
-  daysOfWeek  String            @default("")
-  createdAt   DateTime          @default(now())
-  assignments ShiftAssignment[]
+  id               Int               @id @default(autoincrement())
+  name             String
+  startTime        String
+  endTime          String
+  daysOfWeek       String            @default("")
+  openingProtocol  String            @default("[]")
+  closingProtocol  String            @default("[]")
+  createdAt        DateTime          @default(now())
+  assignments      ShiftAssignment[]
 }
 
 model ShiftAssignment {
