@@ -20,7 +20,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white p-4">
+    <div className="flex min-h-screen items-center justify-center bg-page p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sage-light">
@@ -43,7 +43,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => loginAs('employee')}
-            className="w-full flex items-center justify-center gap-3 rounded-xl border-2 border-sage/30 bg-white py-4 text-base font-semibold text-dark hover:border-sage hover:bg-sage/5 transition-all"
+            className="w-full flex items-center justify-center gap-3 rounded-xl border-2 border-sage/30 bg-page py-4 text-base font-semibold text-dark hover:border-sage hover:bg-sage/5 transition-all"
           >
             <User className="h-5 w-5 text-sage" />
             Portal de Empleado

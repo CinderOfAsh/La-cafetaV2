@@ -300,7 +300,7 @@ export default function TurnoPage() {
   return (
     <div className="flex h-[calc(100vh-53px)] gap-4 overflow-hidden p-4">
       {/* PIZARRA */}
-      <div ref={boardRef} className={`relative flex-1 overflow-hidden rounded-2xl border border-dark/10 ${activeColor?.board || 'bg-white'}`}>
+      <div ref={boardRef} className={`relative flex-1 overflow-hidden rounded-2xl border border-dark/10 ${activeColor?.board || 'bg-page'}`}>
         {/* Bookmark tabs */}
         <div className="absolute top-0 left-0 right-0 z-20 flex items-end gap-1 px-4 pt-1" style={{ height: TAB_H }}>
           <button
@@ -358,7 +358,7 @@ export default function TurnoPage() {
                 key={p.id}
                 data-product
                 onMouseDown={(e) => handleMouseDown(e, p.id)}
-                className={`absolute w-[180px] cursor-grab select-none rounded-xl border border-dark/10 bg-white p-4 transition-shadow ${dragging === p.id ? 'z-30 cursor-grabbing shadow-xl shadow-dark/10' : 'z-10 hover:shadow-lg hover:shadow-dark/5'}`}
+                className={`absolute w-[180px] cursor-grab select-none rounded-xl border border-dark/10 bg-page p-4 transition-shadow ${dragging === p.id ? 'z-30 cursor-grabbing shadow-xl shadow-dark/10' : 'z-10 hover:shadow-lg hover:shadow-dark/5'}`}
                 style={{ left: pos.x, top: pos.y }}
               >
                 {p.imageUrl && (
@@ -403,7 +403,7 @@ export default function TurnoPage() {
           {(selectedTag || search) && (
             <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {filtered.map((p) => (
-                <div key={p.id} className="flex flex-col rounded-xl border border-dark/10 bg-white p-4">
+                <div key={p.id} className="flex flex-col rounded-xl border border-dark/10 bg-page p-4">
                   {p.imageUrl && (
                     <div className="-mx-4 -mt-4 mb-2 h-16 overflow-hidden rounded-t-xl">
                       <img src={p.imageUrl} alt={p.name} className="h-full w-full object-cover" />
@@ -451,7 +451,7 @@ export default function TurnoPage() {
       </div>
 
       {/* COMANDAS */}
-      <div className="flex w-72 shrink-0 flex-col rounded-2xl border border-dark/10 bg-white">
+      <div className="flex w-72 shrink-0 flex-col rounded-2xl border border-dark/10 bg-page">
         <div className="flex items-center gap-2 border-b border-dark/10 px-4 py-3">
           <ShoppingCart className="h-4 w-4 text-sage" />
           <h2 className="text-sm font-semibold text-dark">Comandas</h2>
@@ -473,7 +473,7 @@ export default function TurnoPage() {
                         ? 'border-green-800 bg-green-500/5 opacity-60'
                         : c.priority === 1
                           ? 'border-sage/20 bg-sage/5'
-                          : 'border-dark/10 bg-white'
+                          : 'border-dark/10 bg-page'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-1.5">
@@ -539,7 +539,7 @@ export default function TurnoPage() {
       {/* SALE MODAL */}
       {showSaleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !saving && setShowSaleModal(null)}>
-          <div className="w-full max-w-xs rounded-2xl border border-dark/10 bg-white p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-xs rounded-2xl border border-dark/10 bg-page p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-1 text-lg font-bold text-dark">{showSaleModal.name}</h3>
             <p className="mb-4 text-sm text-sage">${showSaleModal.price.toFixed(2)}</p>
             <p className="mb-1 text-xs font-medium text-grey">Método de pago</p>
@@ -547,14 +547,14 @@ export default function TurnoPage() {
               <button
                 onClick={() => makeSale(showSaleModal, 'cash')}
                 disabled={saving}
-                className="flex w-full items-center gap-3 rounded-xl border border-dark/10 bg-white px-4 py-3 text-left text-sm text-dark hover:border-sage/50 disabled:opacity-50"
+                className="flex w-full items-center gap-3 rounded-xl border border-dark/10 bg-page px-4 py-3 text-left text-sm text-dark hover:border-sage/50 disabled:opacity-50"
               >
                 <Banknote className="h-5 w-5 text-green-400" /> Efectivo
               </button>
               <button
                 onClick={() => makeSale(showSaleModal, 'card')}
                 disabled={saving}
-                className="flex w-full items-center gap-3 rounded-xl border border-dark/10 bg-white px-4 py-3 text-left text-sm text-dark hover:border-sage/50 disabled:opacity-50"
+                className="flex w-full items-center gap-3 rounded-xl border border-dark/10 bg-page px-4 py-3 text-left text-sm text-dark hover:border-sage/50 disabled:opacity-50"
               >
                 <CreditCard className="h-5 w-5 text-blue-400" /> Datáfono
               </button>
@@ -567,7 +567,7 @@ export default function TurnoPage() {
       {/* PROTOCOL MODAL */}
       {showProtocolModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowProtocolModal(null)}>
-          <div className="w-full max-w-sm rounded-2xl border border-dark/10 bg-white p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl border border-dark/10 bg-page p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-3 text-lg font-bold text-dark">Protocolo: {showProtocolModal.name}</h3>
             <div className="mb-4 space-y-1.5">
               {showProtocolModal.steps.map((step, i) => (
@@ -585,7 +585,7 @@ export default function TurnoPage() {
       {/* Toasts */}
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {toasts.map((t) => (
-          <div key={t.id} className="rounded-lg bg-white px-4 py-2 text-sm text-dark shadow-lg border border-dark/10">
+          <div key={t.id} className="rounded-lg bg-page px-4 py-2 text-sm text-dark shadow-lg border border-dark/10">
             {t.message}
           </div>
         ))}

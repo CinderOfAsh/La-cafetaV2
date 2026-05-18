@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
   --color-sage: #7FA69B;
   --color-sage-light: rgba(127, 166, 155, 0.08);
   --color-dark: #2E3231;
@@ -13,10 +13,54 @@
   --font-serif: var(--font-crimson);
 }
 
-html {
-  background: #FFFFFF;
-  color: #2E3231;
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-secondary: #FFFFFF;
+  --text-primary: #2E3231;
+  --text-muted: #949E9B;
+  --text-accent: #2D1B3D;
+  --border-light: #F3E8FF;
+  --border-input: #E5E0E8;
+  --border-default: rgba(0,0,0,0.06);
+  --input-bg: #FFFFFF;
+  --table-hover: rgba(0,0,0,0.03);
+  --bg-hover: rgba(0,0,0,0.03);
+  --overlay: rgba(0,0,0,0.4);
+  --accent-purple: #A78BFA;
 }
+
+html.dark {
+  --bg-primary: #0F172A;
+  --bg-card: #1E293B;
+  --bg-secondary: #1E293B;
+  --text-primary: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-accent: #E2E8F0;
+  --border-light: #334155;
+  --border-input: #334155;
+  --border-default: rgba(255,255,255,0.08);
+  --input-bg: #1E293B;
+  --table-hover: rgba(255,255,255,0.03);
+  --bg-hover: rgba(255,255,255,0.05);
+  --overlay: rgba(0,0,0,0.7);
+  --accent-purple: #A78BFA;
+}
+
+html {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme-aware utility classes */
+.bg-page { background: var(--bg-primary); }
+.bg-card { background: var(--bg-card); }
+.text-main { color: var(--text-primary); }
+.text-muted { color: var(--text-muted); }
+.text-accent { color: var(--text-accent); }
+.border-default { border-color: var(--border-light); }
+.border-input { border-color: var(--border-input); }
 
 /* Sage Pill Buttons */
 .btn-sage {
@@ -60,7 +104,7 @@ html {
 
 /* Wellness Cards */
 .card-wellness {
-  background: white;
+  background: var(--bg-card);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.02);
   transition: all 0.25s ease;
@@ -83,29 +127,16 @@ html {
   filter: blur(0);
 }
 
-/* Custom Cursor Follower */
-.cursor-follower {
-  width: 8px;
-  height: 8px;
-  background: #7FA69B;
-  border-radius: 50%;
-  position: fixed;
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.2;
-  transition: transform 0.1s ease;
-  mix-blend-mode: multiply;
-  transform: translate(-4px, -4px);
-}
-
 /* Input Fields */
 input, select, textarea {
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
+  background: var(--input-bg);
+  color: var(--text-primary);
 }
 input:focus, select:focus, textarea:focus {
   border-color: #7FA69B;
@@ -120,4 +151,21 @@ input:focus, select:focus, textarea:focus {
 @keyframes scale-in {
   0% { opacity: 0; transform: scale(0.95); }
   100% { opacity: 1; transform: scale(1); }
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  background: none;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+.theme-toggle-btn:hover {
+  background: var(--bg-hover);
 }

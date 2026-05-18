@@ -191,8 +191,8 @@ export default function AdminPersonalPage() {
       </div>
 
       <div className="mb-6 flex border-b border-dark/10">
-        <button onClick={() => setTab('employees')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'employees' ? 'scale-y-105 border-dark/10 bg-white text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Empleados</button>
-        <button onClick={() => setTab('shifts')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'shifts' ? 'scale-y-105 border-dark/10 bg-white text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Turnos</button>
+        <button onClick={() => setTab('employees')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'employees' ? 'scale-y-105 border-dark/10 bg-page text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Empleados</button>
+        <button onClick={() => setTab('shifts')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'shifts' ? 'scale-y-105 border-dark/10 bg-page text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Turnos</button>
       </div>
 
       {tab === 'employees' && (
@@ -208,15 +208,15 @@ export default function AdminPersonalPage() {
           </div>
 
           {showUserForm && (
-            <div className="mb-6 rounded-xl border border-dark/10 bg-white p-5">
+            <div className="mb-6 rounded-xl border border-dark/10 bg-page p-5">
               <h2 className="mb-4 text-sm font-semibold text-dark">{editingUser ? 'Editar empleado' : 'Nuevo empleado'}</h2>
               {error && <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{error}</div>}
               <form onSubmit={handleUserSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div><label className="mb-1 block text-sm text-light-grey">Nombre</label><input required value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" /></div>
-                  <div><label className="mb-1 block text-sm text-light-grey">Email</label><input required type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" /></div>
-                  <div><label className="mb-1 block text-sm text-light-grey">Contraseña {editingUser ? '(dejar vacía para no cambiar)' : ''}</label><input type="password" required={!editingUser} value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" /></div>
-                  <div><label className="mb-1 block text-sm text-light-grey">Rol</label><select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark"><option value="EMPLOYEE">Empleado</option><option value="ADMIN">Administrador</option></select></div>
+                  <div><label className="mb-1 block text-sm text-light-grey">Nombre</label><input required value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" /></div>
+                  <div><label className="mb-1 block text-sm text-light-grey">Email</label><input required type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" /></div>
+                  <div><label className="mb-1 block text-sm text-light-grey">Contraseña {editingUser ? '(dejar vacía para no cambiar)' : ''}</label><input type="password" required={!editingUser} value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" /></div>
+                  <div><label className="mb-1 block text-sm text-light-grey">Rol</label><select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark"><option value="EMPLOYEE">Empleado</option><option value="ADMIN">Administrador</option></select></div>
                 </div>
 
                 <div>
@@ -229,8 +229,8 @@ export default function AdminPersonalPage() {
                   <div className="space-y-2">
                     {userCustomFields.map((f, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <input value={f.key} onChange={(e) => setUserCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Clave (ej: DNI)" />
-                        <input value={f.value} onChange={(e) => setUserCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Valor" />
+                        <input value={f.key} onChange={(e) => setUserCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Clave (ej: DNI)" />
+                        <input value={f.value} onChange={(e) => setUserCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Valor" />
                         <button type="button" onClick={() => setUserCustomFields((prev) => prev.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -296,14 +296,14 @@ export default function AdminPersonalPage() {
           </div>
 
           {showShiftForm && (
-            <div className="mb-6 rounded-xl border border-dark/10 bg-white p-5">
+            <div className="mb-6 rounded-xl border border-dark/10 bg-page p-5">
               <h2 className="mb-4 text-sm font-semibold text-dark">{editingShift ? 'Editar turno' : 'Nuevo horario de turno'}</h2>
               {error && <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{error}</div>}
               <form onSubmit={handleShiftSubmit} className="space-y-4">
-                <div><label className="mb-1 block text-sm text-light-grey">Nombre</label><input required value={shiftName} onChange={(e) => setShiftName(e.target.value)} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" placeholder="Mañana" /></div>
+                <div><label className="mb-1 block text-sm text-light-grey">Nombre</label><input required value={shiftName} onChange={(e) => setShiftName(e.target.value)} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder="Mañana" /></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><label className="mb-1 block text-sm text-light-grey">Hora inicio</label><input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" /></div>
-                  <div><label className="mb-1 block text-sm text-light-grey">Hora fin</label><input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" /></div>
+                  <div><label className="mb-1 block text-sm text-light-grey">Hora inicio</label><input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" /></div>
+                  <div><label className="mb-1 block text-sm text-light-grey">Hora fin</label><input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" /></div>
                 </div>
                 <div>
                   <label className="mb-1 block text-sm text-light-grey">Días de la semana</label>
@@ -331,7 +331,7 @@ export default function AdminPersonalPage() {
 
           <div className="space-y-4">
             {shifts.map((shift) => (
-              <div key={shift.id} className="rounded-xl border border-dark/10 bg-white p-5">
+              <div key={shift.id} className="rounded-xl border border-dark/10 bg-page p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold text-dark">{shift.name}</h3>
@@ -373,7 +373,7 @@ export default function AdminPersonalPage() {
 
       {showDebtModal && debtUserId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-lg rounded-2xl border border-dark/10 bg-white p-6">
+          <div className="w-full max-w-lg rounded-2xl border border-dark/10 bg-page p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-dark">
                 Deudas de {users.find((u) => u.id === debtUserId)?.name}
@@ -412,7 +412,7 @@ export default function AdminPersonalPage() {
 
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {toasts.map((t) => (
-          <div key={t.id} className="rounded-lg bg-white px-4 py-2 text-sm text-dark shadow-lg border border-dark/10">
+          <div key={t.id} className="rounded-lg bg-page px-4 py-2 text-sm text-dark shadow-lg border border-dark/10">
             {t.message}
           </div>
         ))}

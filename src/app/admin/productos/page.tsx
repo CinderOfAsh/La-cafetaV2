@@ -289,7 +289,7 @@ export default function AdminProductosPage() {
           onClick={() => setTab('products')}
           className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${
             tab === 'products'
-              ? 'scale-y-105 border-dark/10 bg-white text-dark'
+              ? 'scale-y-105 border-dark/10 bg-page text-dark'
               : 'border-transparent text-light-grey hover:text-grey'
           }`}
         >
@@ -299,7 +299,7 @@ export default function AdminProductosPage() {
           onClick={() => setTab('inventory')}
           className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${
             tab === 'inventory'
-              ? 'scale-y-105 border-dark/10 bg-white text-dark'
+              ? 'scale-y-105 border-dark/10 bg-page text-dark'
               : 'border-transparent text-light-grey hover:text-grey'
           }`}
         >
@@ -328,7 +328,7 @@ export default function AdminProductosPage() {
           </div>
 
           {showForm && (
-            <div className="mb-6 rounded-xl border border-dark/10 bg-white p-5">
+            <div className="mb-6 rounded-xl border border-dark/10 bg-page p-5">
               <h2 className="mb-4 text-sm font-semibold text-dark">
                 {editing ? 'Editar producto' : 'Nuevo producto'}
               </h2>
@@ -339,24 +339,24 @@ export default function AdminProductosPage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm text-light-grey">Nombre</label>
-                    <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" />
+                    <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm text-light-grey">Precio</label>
-                    <input required type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" />
+                    <input required type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm text-light-grey">Tags (separados por coma)</label>
-                    <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" placeholder="bebida, caliente" />
+                    <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder="bebida, caliente" />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm text-light-grey">Descripción</label>
-                    <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" />
+                    <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" />
                   </div>
                   <div>
                     <label className="mb-1 block text-sm text-light-grey">Imagen (URL)</label>
                     <div className="flex items-center gap-3">
-                      <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" placeholder="https://ejemplo.com/foto.jpg" />
+                      <input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder="https://ejemplo.com/foto.jpg" />
                       {form.imageUrl && (
                         <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-dark/10">
                           <img src={form.imageUrl} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%239CA3AF"><rect width="24" height="24" rx="4"/><text x="12" y="16" text-anchor="middle" font-size="14" fill="white">?</text></svg>' }} />
@@ -379,8 +379,8 @@ export default function AdminProductosPage() {
                   <div className="space-y-2">
                     {customFields.map((f, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <input value={f.key} onChange={(e) => setCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Clave (ej: Proveedor)" />
-                        <input value={f.value} onChange={(e) => setCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Valor" />
+                        <input value={f.key} onChange={(e) => setCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Clave (ej: Proveedor)" />
+                        <input value={f.value} onChange={(e) => setCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Valor" />
                         <button type="button" onClick={() => setCustomFields((prev) => prev.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -406,7 +406,7 @@ export default function AdminProductosPage() {
                           <select
                             value={rm.rawMaterialId}
                             onChange={(e) => setRecipeMaterials((prev) => prev.map((x, j) => j === i ? { ...x, rawMaterialId: parseInt(e.target.value) } : x))}
-                            className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark"
+                            className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark"
                           >
                             <option value={0}>Seleccionar materia prima...</option>
                             {rawMaterials.map((mat) => (
@@ -419,7 +419,7 @@ export default function AdminProductosPage() {
                             min="0.1"
                             value={rm.quantity}
                             onChange={(e) => setRecipeMaterials((prev) => prev.map((x, j) => j === i ? { ...x, quantity: parseFloat(e.target.value) || 1 } : x))}
-                            className="w-20 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark"
+                            className="w-20 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark"
                             placeholder="Cant."
                           />
                           <button type="button" onClick={() => setRecipeMaterials((prev) => prev.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500">
@@ -570,14 +570,14 @@ export default function AdminProductosPage() {
                       <td className="px-4 py-3 text-grey">${item.product.price.toFixed(2)}</td>
                       <td className="px-4 py-3">
                         {isEditing ? (
-                          <input type="number" value={editStock} onChange={(e) => setEditStock(e.target.value)} className="w-20 rounded border border-dark/10 bg-white px-2 py-1 text-sm text-dark" autoFocus />
+                          <input type="number" value={editStock} onChange={(e) => setEditStock(e.target.value)} className="w-20 rounded border border-dark/10 bg-page px-2 py-1 text-sm text-dark" autoFocus />
                         ) : (
                           <span className={isLow ? 'font-semibold text-red-500' : 'text-grey'}>{item.stock}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         {isEditing ? (
-                          <input type="number" value={editMin} onChange={(e) => setEditMin(e.target.value)} className="w-20 rounded border border-dark/10 bg-white px-2 py-1 text-sm text-dark" />
+                          <input type="number" value={editMin} onChange={(e) => setEditMin(e.target.value)} className="w-20 rounded border border-dark/10 bg-page px-2 py-1 text-sm text-dark" />
                         ) : (
                           <span className="text-light-grey">{item.minStock}</span>
                         )}
@@ -619,8 +619,8 @@ export default function AdminProductosPage() {
                           <div className="space-y-2">
                             {invCustomFields.map((f, i) => (
                               <div key={i} className="flex items-center gap-2">
-                                <input value={f.key} onChange={(e) => setInvCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Clave (ej: Proveedor)" />
-                                <input value={f.value} onChange={(e) => setInvCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Valor" />
+                                <input value={f.key} onChange={(e) => setInvCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, key: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Clave (ej: Proveedor)" />
+                                <input value={f.value} onChange={(e) => setInvCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, value: e.target.value } : x))} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark placeholder-light-grey" placeholder="Valor" />
                                 <button type="button" onClick={() => setInvCustomFields((prev) => prev.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500">
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -644,7 +644,7 @@ export default function AdminProductosPage() {
 
       {showCocinaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowCocinaModal(false)}>
-          <div className="w-full max-w-lg rounded-2xl border border-dark/10 bg-white p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-2xl border border-dark/10 bg-page p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5 text-sage" />
               <h2 className="text-lg font-bold text-dark">Protocolo de Cocina: {cocinaProductName}</h2>
@@ -658,7 +658,7 @@ export default function AdminProductosPage() {
                     value={step}
                     onChange={(e) => setCocinaSteps((prev) => prev.map((s, j) => j === i ? e.target.value : s))}
                     rows={2}
-                    className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark placeholder-light-grey"
+                    className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark placeholder-light-grey"
                     placeholder={`Paso ${i + 1}`}
                   />
                   <div className="flex shrink-0 flex-col gap-0.5">
@@ -692,7 +692,7 @@ export default function AdminProductosPage() {
 
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {toasts.map((t) => (
-          <div key={t.id} className="rounded-lg bg-white px-4 py-2 text-sm text-dark shadow-lg border border-dark/10">
+          <div key={t.id} className="rounded-lg bg-page px-4 py-2 text-sm text-dark shadow-lg border border-dark/10">
             {t.message}
           </div>
         ))}

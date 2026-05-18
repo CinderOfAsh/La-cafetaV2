@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Package, Users, ClipboardCheck, BarChart3, Coffee, LogOut, Beaker, Wheat } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const cards = [
   { label: 'Productos', href: '/admin/productos', icon: Package, desc: 'Gestionar productos e inventario' },
@@ -16,8 +17,8 @@ export default function HubAdminPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="flex items-center justify-between border-b border-sage/20 bg-white px-6 py-4">
+    <div className="min-h-screen bg-page">
+      <header className="flex items-center justify-between border-b border-sage/20 bg-page px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sage-light">
             <Coffee className="h-5 w-5 text-sage" />
@@ -27,15 +28,18 @@ export default function HubAdminPage() {
             <p className="text-xs text-light-grey">Panel de administración</p>
           </div>
         </div>
-        <button
-          onClick={async () => {
-            await fetch('/api/auth/logout', { method: 'POST' });
-            router.push('/login');
-          }}
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-light-grey hover:bg-red-50 hover:text-red-500"
-        >
-          <LogOut className="h-4 w-4" /> Cerrar sesión
-        </button>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <button
+            onClick={async () => {
+              await fetch('/api/auth/logout', { method: 'POST' });
+              router.push('/login');
+            }}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted hover:bg-red-50 hover:text-red-500"
+          >
+            <LogOut className="h-4 w-4" /> Cerrar sesión
+          </button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-12">

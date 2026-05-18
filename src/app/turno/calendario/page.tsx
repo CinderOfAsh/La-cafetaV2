@@ -145,7 +145,7 @@ export default function CalendarioPage() {
   if (loading) return <div className="flex h-64 items-center justify-center text-light-grey">Cargando...</div>;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-page">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <h1 className="mb-6 text-2xl font-bold text-dark" style={{ fontFamily: 'var(--font-inter)', letterSpacing: '-0.03em' }}>Calendario de Turnos</h1>
 
@@ -339,7 +339,7 @@ export default function CalendarioPage() {
                 <select
                   value={swapPartner}
                   onChange={(e) => setSwapPartner(e.target.value)}
-                  className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark"
+                  className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark"
                 >
                   <option value="">Sustituto...</option>
                   {users.filter((u) => u.id !== myId).map((u) => (

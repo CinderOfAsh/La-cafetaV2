@@ -78,25 +78,25 @@ export default function AdminProtocolosPage() {
       </div>
 
       <div className="mb-6 flex border-b border-dark/10">
-        <button onClick={() => setTab('general')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'general' ? 'scale-y-105 border-dark/10 bg-white text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Apertura y Cierre</button>
-        <button onClick={() => setTab('cocina')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'cocina' ? 'scale-y-105 border-dark/10 bg-white text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>
+        <button onClick={() => setTab('general')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'general' ? 'scale-y-105 border-dark/10 bg-page text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Apertura y Cierre</button>
+        <button onClick={() => setTab('cocina')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'cocina' ? 'scale-y-105 border-dark/10 bg-page text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>
           Cocina
           {cocinaProtocols.length > 0 && <span className="ml-2 rounded-full bg-sage-light px-1.5 py-0.5 text-xs text-sage">{cocinaProtocols.length}</span>}
         </button>
-        <button onClick={() => setTab('producto')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'producto' ? 'scale-y-105 border-dark/10 bg-white text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Producto</button>
+        <button onClick={() => setTab('producto')} className={`-mb-px rounded-t-lg border border-b-0 px-5 py-2.5 text-sm font-medium ${tab === 'producto' ? 'scale-y-105 border-dark/10 bg-page text-dark' : 'border-transparent text-light-grey hover:text-grey'}`}>Producto</button>
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-xl border border-dark/10 bg-white p-5">
+        <div className="mb-6 rounded-xl border border-dark/10 bg-page p-5">
           <h2 className="mb-4 text-sm font-semibold text-dark">{editing ? 'Editar protocolo' : 'Nuevo protocolo'}</h2>
           {error && <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div><label className="mb-1 block text-sm text-light-grey">Tipo</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark"><option value="APERTURA">Apertura</option><option value="CIERRE">Cierre</option><option value="COCINA">Cocina</option><option value="PRODUCTO">Producto</option></select></div>
-              <div><label className="mb-1 block text-sm text-light-grey">Nombre</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" placeholder="Protocolo de apertura" /></div>
+              <div><label className="mb-1 block text-sm text-light-grey">Tipo</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark"><option value="APERTURA">Apertura</option><option value="CIERRE">Cierre</option><option value="COCINA">Cocina</option><option value="PRODUCTO">Producto</option></select></div>
+              <div><label className="mb-1 block text-sm text-light-grey">Nombre</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder="Protocolo de apertura" /></div>
             </div>
-            <div><label className="mb-1 block text-sm text-light-grey">Descripción</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" /></div>
-            <div><label className="mb-1 block text-sm text-light-grey">Pasos (uno por línea)</label><textarea value={form.steps} onChange={(e) => setForm({ ...form, steps: e.target.value })} rows={4} className="w-full rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark font-mono" placeholder="Verificar luces&#10;Prender máquinas&#10;Revisar inventario" /></div>
+            <div><label className="mb-1 block text-sm text-light-grey">Descripción</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" /></div>
+            <div><label className="mb-1 block text-sm text-light-grey">Pasos (uno por línea)</label><textarea value={form.steps} onChange={(e) => setForm({ ...form, steps: e.target.value })} rows={4} className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark font-mono" placeholder="Verificar luces&#10;Prender máquinas&#10;Revisar inventario" /></div>
             <div className="flex gap-2"><button type="submit" className="btn-sage text-sm">{editing ? 'Actualizar' : 'Crear'}</button><button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-dark/10 px-4 py-2 text-sm text-grey hover:bg-dark/5">Cancelar</button></div>
           </form>
         </div>
@@ -108,7 +108,7 @@ export default function AdminProtocolosPage() {
             let steps: string[] = [];
             try { steps = JSON.parse(p.steps); } catch { steps = []; }
             return (
-              <div key={p.id} className="rounded-xl border border-dark/10 bg-white p-5">
+              <div key={p.id} className="rounded-xl border border-dark/10 bg-page p-5">
                 <div className="mb-3 flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export default function AdminProtocolosPage() {
             let steps: string[] = [];
             try { steps = JSON.parse(p.steps); } catch { steps = []; }
             return (
-              <div key={p.id} className="rounded-xl border border-dark/10 bg-white p-5">
+              <div key={p.id} className="rounded-xl border border-dark/10 bg-page p-5">
                 <div className="mb-3 flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
@@ -165,7 +165,7 @@ export default function AdminProtocolosPage() {
             let steps: string[] = [];
             try { steps = JSON.parse(p.steps); } catch { steps = []; }
             return (
-              <div key={p.id} className="rounded-xl border border-dark/10 bg-white p-5">
+              <div key={p.id} className="rounded-xl border border-dark/10 bg-page p-5">
                 <div className="mb-3 flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
@@ -190,13 +190,13 @@ export default function AdminProtocolosPage() {
 
       {editingCocina && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditingCocina(null)}>
-          <div className="w-full max-w-lg rounded-2xl border border-dark/10 bg-white p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-2xl border border-dark/10 bg-page p-6" onClick={(e) => e.stopPropagation()}>
             <h2 className="mb-4 text-lg font-bold text-dark">Editar: {editingCocina.name}</h2>
             <div className="mb-4 space-y-2">
               {cocinaSteps.map((step, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-dark/5 text-xs text-light-grey">{i + 1}</span>
-                  <textarea value={step} onChange={(e) => setCocinaSteps((prev) => prev.map((s, j) => j === i ? e.target.value : s))} rows={2} className="flex-1 rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-dark" placeholder={`Paso ${i + 1}`} />
+                  <textarea value={step} onChange={(e) => setCocinaSteps((prev) => prev.map((s, j) => j === i ? e.target.value : s))} rows={2} className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder={`Paso ${i + 1}`} />
                   <div className="flex shrink-0 flex-col gap-0.5">
                     <button type="button" onClick={() => setCocinaSteps((prev) => prev.map((s, j) => j === i - 1 ? prev[j] : j === i ? prev[j - 1] : s))} disabled={i === 0} className="rounded p-0.5 text-light-grey hover:text-dark disabled:opacity-20"><ArrowUp className="h-3 w-3" /></button>
                     <button type="button" onClick={() => setCocinaSteps((prev) => prev.map((s, j) => j === i + 1 ? prev[j] : j === i ? prev[j + 1] : s))} disabled={i === cocinaSteps.length - 1} className="rounded p-0.5 text-light-grey hover:text-dark disabled:opacity-20"><ArrowDown className="h-3 w-3" /></button>

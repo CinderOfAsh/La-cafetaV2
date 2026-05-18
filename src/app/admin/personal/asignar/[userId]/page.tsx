@@ -215,7 +215,7 @@ export default function AsignarTurnosPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-53px)] flex-col bg-white">
+    <div className="flex h-[calc(100vh-53px)] flex-col bg-page">
       <header className="flex items-center gap-4 border-b border-sage/20 px-6 py-3">
         <button
           onClick={() => router.push('/admin/personal')}
@@ -264,7 +264,7 @@ export default function AsignarTurnosPage() {
                   <div
                     key={idx}
                     className={`relative min-h-24 border-b border-r border-dark/5 p-1.5 transition-colors ${
-                      isToday ? 'bg-sage/5' : hasPending ? 'bg-blue-50' : 'bg-white'
+                      isToday ? 'bg-sage/5' : hasPending ? 'bg-blue-50' : 'bg-page'
                     }`}
                   >
                     <div className="mb-1 flex items-center justify-between">
@@ -283,7 +283,7 @@ export default function AsignarTurnosPage() {
                         <select
                           value={editShiftId}
                           onChange={(e) => setEditShiftId(e.target.value)}
-                          className="w-full rounded border border-dark/10 bg-white px-1 py-1 text-[10px] text-dark"
+                          className="w-full rounded border border-dark/10 bg-page px-1 py-1 text-[10px] text-dark"
                         >
                           <option value="">Turno...</option>
                           {availableShifts.map((s) => (
@@ -293,7 +293,7 @@ export default function AsignarTurnosPage() {
                         <select
                           value={editRole}
                           onChange={(e) => setEditRole(e.target.value)}
-                          className="w-full rounded border border-dark/10 bg-white px-1 py-1 text-[10px] text-dark"
+                          className="w-full rounded border border-dark/10 bg-page px-1 py-1 text-[10px] text-dark"
                         >
                           <option value="ANOTADOR">Anotador</option>
                           <option value="COCINERO">Cocinero</option>
@@ -358,7 +358,7 @@ export default function AsignarTurnosPage() {
       </div>
 
       {pendingCount > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-dark/10 bg-white/95 backdrop-blur-sm">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-dark/10 bg-page/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
             <span className="text-sm text-light-grey">
               {pendingCount} cambio{pendingCount !== 1 ? 's' : ''} pendiente{pendingCount !== 1 ? 's' : ''}

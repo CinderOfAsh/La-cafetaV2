@@ -98,7 +98,7 @@ export default function AdminMateriasPrimasPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-[#2D1B3D]" style={{ fontFamily: 'var(--font-indie)' }}>
+        <h1 className="text-xl font-bold text-accent" style={{ fontFamily: 'var(--font-indie)' }}>
           Materias Primas
         </h1>
         <button
@@ -118,20 +118,20 @@ export default function AdminMateriasPrimasPage() {
       )}
 
       {showForm && (
-        <div className="mb-6 rounded-xl border border-[#F3E8FF] bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold text-[#2D1B3D]" style={{ fontFamily: 'var(--font-indie)' }}>
+        <div className="mb-6 rounded-xl border border-default bg-page p-5 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold text-accent" style={{ fontFamily: 'var(--font-indie)' }}>
             {editing ? 'Editar materia prima' : 'Nueva materia prima'}
           </h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="mb-1 block text-sm text-[#9CA3AF]" style={{ fontFamily: 'var(--font-indie)' }}>Nombre</label>
+              <label className="mb-1 block text-sm text-muted" style={{ fontFamily: 'var(--font-indie)' }}>Nombre</label>
               <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-lg border border-[#E5E0E8] bg-white px-3 py-2 text-sm text-[#2D1B3D]" />
+                className="w-full rounded-lg border border-input bg-page px-3 py-2 text-sm text-accent" />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-[#9CA3AF]" style={{ fontFamily: 'var(--font-indie)' }}>Unidad</label>
+              <label className="mb-1 block text-sm text-muted" style={{ fontFamily: 'var(--font-indie)' }}>Unidad</label>
               <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                className="w-full rounded-lg border border-[#E5E0E8] bg-white px-3 py-2 text-sm text-[#2D1B3D]">
+                className="w-full rounded-lg border border-input bg-page px-3 py-2 text-sm text-accent">
                 <option value="unidad">unidad</option>
                 <option value="kg">kg</option>
                 <option value="g">g</option>
@@ -142,14 +142,14 @@ export default function AdminMateriasPrimasPage() {
             </div>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="mb-1 block text-sm text-[#9CA3AF]" style={{ fontFamily: 'var(--font-indie)' }}>Stock actual</label>
+                <label className="mb-1 block text-sm text-muted" style={{ fontFamily: 'var(--font-indie)' }}>Stock actual</label>
                 <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                  className="w-full rounded-lg border border-[#E5E0E8] bg-white px-3 py-2 text-sm text-[#2D1B3D]" />
+                  className="w-full rounded-lg border border-input bg-page px-3 py-2 text-sm text-accent" />
               </div>
               <div className="flex-1">
-                <label className="mb-1 block text-sm text-[#9CA3AF]" style={{ fontFamily: 'var(--font-indie)' }}>Stock mínimo</label>
+                <label className="mb-1 block text-sm text-muted" style={{ fontFamily: 'var(--font-indie)' }}>Stock mínimo</label>
                 <input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })}
-                  className="w-full rounded-lg border border-[#E5E0E8] bg-white px-3 py-2 text-sm text-[#2D1B3D]" />
+                  className="w-full rounded-lg border border-input bg-page px-3 py-2 text-sm text-accent" />
               </div>
             </div>
             <div className="col-span-2 flex gap-2">
@@ -158,16 +158,16 @@ export default function AdminMateriasPrimasPage() {
                 {editing ? 'Actualizar' : 'Crear'}
               </button>
               <button type="button" onClick={() => setShowForm(false)}
-                className="rounded-lg border border-[#F3E8FF] px-4 py-2 text-sm text-[#2D1B3D]">Cancelar</button>
+                className="rounded-lg border border-default px-4 py-2 text-sm text-accent">Cancelar</button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="rounded-xl border border-[#F3E8FF] bg-white shadow-sm">
+      <div className="rounded-xl border border-default bg-page shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#F3E8FF] text-[#9CA3AF]">
+            <tr className="border-b border-default text-muted">
               <th className="px-4 py-3 text-left font-medium">Nombre</th>
               <th className="px-4 py-3 text-left font-medium">Unidad</th>
               <th className="px-4 py-3 text-left font-medium">Stock</th>
@@ -178,16 +178,16 @@ export default function AdminMateriasPrimasPage() {
           </thead>
           <tbody>
             {materials.length === 0 && !loading && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-[#9CA3AF]">No hay materias primas registradas</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted">No hay materias primas registradas</td></tr>
             )}
             {materials.map((m) => {
               const isLow = m.stock <= m.minStock;
               return (
-                <tr key={m.id} className="border-b border-[#F3E8FF] last:border-0">
-                  <td className="px-4 py-3 font-medium text-[#2D1B3D]">{m.name}</td>
-                  <td className="px-4 py-3 text-[#9CA3AF]">{m.unit}</td>
-                  <td className="px-4 py-3 text-[#2D1B3D]">{m.stock} {m.unit}</td>
-                  <td className="px-4 py-3 text-[#2D1B3D]">{m.minStock} {m.unit}</td>
+                <tr key={m.id} className="border-b border-default last:border-0">
+                  <td className="px-4 py-3 font-medium text-accent">{m.name}</td>
+                  <td className="px-4 py-3 text-muted">{m.unit}</td>
+                  <td className="px-4 py-3 text-accent">{m.stock} {m.unit}</td>
+                  <td className="px-4 py-3 text-accent">{m.minStock} {m.unit}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                       isLow
@@ -201,11 +201,11 @@ export default function AdminMateriasPrimasPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       <button onClick={() => openEdit(m)}
-                        className="rounded-lg p-1.5 text-[#9CA3AF] hover:bg-[#F3E8FF] hover:text-[#A78BFA]">
+                        className="rounded-lg p-1.5 text-muted hover:bg-[#F3E8FF] hover:text-[#A78BFA]">
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button onClick={() => handleDelete(m.id)}
-                        className="rounded-lg p-1.5 text-[#9CA3AF] hover:bg-red-500/10 hover:text-red-500">
+                        className="rounded-lg p-1.5 text-muted hover:bg-red-500/10 hover:text-red-500">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -219,7 +219,7 @@ export default function AdminMateriasPrimasPage() {
 
       <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {toasts.map((t) => (
-          <div key={t.id} className="rounded-lg bg-white px-4 py-2 text-sm text-[#2D1B3D] shadow-lg border border-[#F3E8FF]">
+          <div key={t.id} className="rounded-lg bg-page px-4 py-2 text-sm text-accent shadow-lg border border-default">
             {t.message}
           </div>
         ))}

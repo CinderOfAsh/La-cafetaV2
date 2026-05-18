@@ -60,7 +60,7 @@ export default function TurnoDashboardPage() {
     <div className="mx-auto max-w-4xl px-6 py-12">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-dark" style={{ fontFamily: 'var(--font-inter)', letterSpacing: '-0.03em' }}>Mi Rendimiento</h1>
-        <button onClick={exportMySales} className="flex items-center gap-2 rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm text-grey hover:border-sage hover:text-sage">
+        <button onClick={exportMySales} className="flex items-center gap-2 rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-grey hover:border-sage hover:text-sage">
           <Download className="h-4 w-4" /> Exportar mis ventas
         </button>
       </div>

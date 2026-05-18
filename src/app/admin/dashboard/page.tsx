@@ -55,11 +55,11 @@ export default function AdminDashboardPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <label className="text-xs text-light-grey">Desde</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark" />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark" />
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs text-light-grey">Hasta</label>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="rounded-lg border border-dark/10 bg-white px-3 py-1.5 text-sm text-dark" />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark" />
           </div>
           <button onClick={exportSales} className="flex items-center gap-2 rounded-lg border border-dark/10 px-3 py-1.5 text-sm text-grey hover:border-sage hover:text-sage">
             <Download className="h-4 w-4" /> Exportar CSV
@@ -68,7 +68,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {noData && (
-        <div className="mb-6 rounded-xl border border-dark/10 bg-white p-8 text-center">
+        <div className="mb-6 rounded-xl border border-dark/10 bg-page p-8 text-center">
           <p className="text-lg font-semibold text-grey">Sin datos en este periodo</p>
           <p className="mt-1 text-sm text-light-grey">No hay ventas registradas entre {startDate} y {endDate}.</p>
         </div>
@@ -83,11 +83,11 @@ export default function AdminDashboardPage() {
       </div>
 
       {stats.topEmployees.length > 0 && (
-        <div className="mb-8 rounded-xl border border-dark/10 bg-white p-5">
+        <div className="mb-8 rounded-xl border border-dark/10 bg-page p-5">
           <div className="mb-4 flex items-center gap-2"><Users className="h-5 w-5 text-sage" /><h2 className="font-semibold text-dark">Top 3 empleados</h2></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {stats.topEmployees.map((e, i) => (
-              <div key={i} className="rounded-lg border border-dark/10 bg-white p-4">
+              <div key={i} className="rounded-lg border border-dark/10 bg-page p-4">
                 <div className="flex items-center gap-2">
                   <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${i === 0 ? 'bg-sage text-white' : i === 1 ? 'bg-light-grey text-white' : 'bg-dark/20 text-grey'}`}>{i + 1}</span>
                   <div>
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
 
       <div className="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
         {stats.salesByHour.length > 0 && (
-          <div className="rounded-xl border border-dark/10 bg-white p-5">
+          <div className="rounded-xl border border-dark/10 bg-page p-5">
             <div className="mb-4 flex items-center gap-2"><Clock className="h-5 w-5 text-blue-500" /><h2 className="font-semibold text-dark">Ventas por hora</h2></div>
             <div className="space-y-2">
               {stats.salesByHour.map((h) => (
@@ -120,7 +120,7 @@ export default function AdminDashboardPage() {
         )}
 
         {stats.topProducts.length > 0 && (
-          <div className="rounded-xl border border-dark/10 bg-white p-5">
+          <div className="rounded-xl border border-dark/10 bg-page p-5">
             <div className="mb-4 flex items-center gap-2"><Star className="h-5 w-5 text-green-500" /><h2 className="font-semibold text-dark">Top 10 productos</h2></div>
             <div className="space-y-2">
               {stats.topProducts.map((p, i) => (
@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
         )}
 
         {stats.paymentMethodData.length > 0 && (
-          <div className="rounded-xl border border-dark/10 bg-white p-5">
+          <div className="rounded-xl border border-dark/10 bg-page p-5">
             <div className="mb-4 flex items-center gap-2"><CreditCard className="h-5 w-5 text-purple-500" /><h2 className="font-semibold text-dark">Efectivo vs Datáfono</h2></div>
             <div className="space-y-4">
               {stats.paymentMethodData.map((pm) => {
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
         )}
 
         {stats.topEmployees.length > 0 && (
-          <div className="rounded-xl border border-dark/10 bg-white p-5">
+          <div className="rounded-xl border border-dark/10 bg-page p-5">
             <div className="mb-4 flex items-center gap-2"><Users className="h-5 w-5 text-sage" /><h2 className="font-semibold text-dark">Ventas por empleado</h2></div>
             <div className="space-y-2">
               {stats.topEmployees.map((e, i) => (
@@ -181,14 +181,14 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div className="rounded-xl border border-dark/10 bg-white p-5">
+        <div className="rounded-xl border border-dark/10 bg-page p-5">
           <div className="mb-4 flex items-center gap-2"><RotateCcw className="h-5 w-5 text-cyan-500" /><h2 className="font-semibold text-dark">Cambios realizados</h2></div>
           {stats.swaps.length === 0 ? (
             <p className="py-4 text-center text-sm text-light-grey">Sin cambios registrados.</p>
           ) : (
             <div className="space-y-2">
               {stats.swaps.slice(0, 10).map((s) => (
-                <div key={s.id} className="flex items-center justify-between rounded-lg border border-dark/10 bg-white px-3 py-2 text-sm">
+                <div key={s.id} className="flex items-center justify-between rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm">
                   <div>
                     <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${s.type === 'SWAP' ? 'bg-cyan-50 text-cyan-600' : 'bg-orange-50 text-orange-600'}`}>
                       {s.type === 'SWAP' ? 'Intercambio' : 'Sustitución'}
@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="rounded-xl border border-dark/10 bg-white p-5">
+        <div className="rounded-xl border border-dark/10 bg-page p-5">
           <div className="mb-4 flex items-center gap-2"><AlertCircle className="h-5 w-5 text-red-500" /><h2 className="font-semibold text-dark">Deudas pendientes</h2></div>
           {stats.pendingDebts.length === 0 ? (
             <p className="py-4 text-center text-sm text-light-grey">Sin deudas pendientes.</p>
@@ -233,7 +233,7 @@ export default function AdminDashboardPage() {
 
 function KpiCard({ icon: Icon, label, value, sub, color, bg }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string | number; sub?: string; color: string; bg: string }) {
   return (
-    <div className="rounded-xl border border-dark/10 bg-white p-5">
+    <div className="rounded-xl border border-dark/10 bg-page p-5">
       <div className="mb-3 flex items-center gap-3">
         <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg}`}><Icon className={`h-5 w-5 ${color}`} /></div>
         <span className="text-sm text-light-grey">{label}</span>

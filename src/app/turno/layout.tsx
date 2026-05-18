@@ -7,8 +7,8 @@ export default function TurnoLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="flex items-center gap-4 border-b border-sage/20 bg-white px-6 py-3">
+    <div className="min-h-screen bg-page">
+      <header className="flex items-center gap-4 border-b border-sage/20 bg-page px-6 py-3">
         <button
           onClick={() => router.push('/hub-empleado')}
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-light-grey hover:bg-sage-light hover:text-dark"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlayCircle, Calendar, BarChart3, Coffee, LogOut, AlertCircle } from 'lucide-react';
+import ThemeToggle from '../../components/ThemeToggle';
 
 const cards = [
   { label: 'Mi Turno', href: '/turno', icon: PlayCircle, desc: 'Ver y gestionar mi turno actual' },
@@ -30,8 +31,8 @@ export default function HubEmpleadoPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="flex items-center justify-between border-b border-sage/20 bg-white px-6 py-4">
+    <div className="min-h-screen bg-page">
+      <header className="flex items-center justify-between border-b border-sage/20 bg-page px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sage-light">
             <Coffee className="h-5 w-5 text-sage" />
