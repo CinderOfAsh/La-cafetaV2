@@ -48,14 +48,34 @@ export async function POST(request: NextRequest) {
   });
 
   for (const item of items) {
+    const qty = item.quantity || 1;
+
+    // Deduct product inventory
     const inv = await prisma.inventory.findUnique({
       where: { productId: item.productId },
     });
     if (inv) {
       await prisma.inventory.update({
         where: { productId: item.productId },
-        data: { stock: Math.max(0, inv.stock - (item.quantity || 1)) },
+        data: { stock: Math.max(0, inv.stock - qty) },
       });
+    }
+
+    // Deduct raw materials (materias primas) if product has recipes
+    const recipes = await prisma.productRecipe.findMany({
+      where: { productId: item.productId },
+    });
+    for (const recipe of recipes) {
+      const deductAmount = recipe.quantity * qty;
+      const mat = await prisma.rawMaterial.findUnique({
+        where: { id: recipe.rawMaterialId },
+      });
+      if (mat) {
+        await prisma.rawMaterial.update({
+          where: { id: recipe.rawMaterialId },
+          data: { stock: Math.max(0, mat.stock - deductAmount) },
+        });
+      }
     }
   }
 
