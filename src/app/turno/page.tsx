@@ -37,6 +37,8 @@ interface ShiftInfo {
   startTime: string;
   endTime: string;
   role: string;
+  openingSteps: string[];
+  closingSteps: string[];
 }
 
 interface Pos {
@@ -113,10 +115,14 @@ export default function TurnoPage() {
         setProducts(p);
 
         const today = new Date().toISOString().slice(0, 10);
-        return fetch(`/api/shift-assignments?date=${today}`).then((r) => r.json()).then((list: { shiftId: number; date: string; role: string; userId: number; shift: { name: string; startTime: string; endTime: string } }[]) => {
+        return fetch(`/api/shift-assignments?date=${today}`).then((r) => r.json()).then((list: { shiftId: number; date: string; role: string; userId: number; shift: { name: string; startTime: string; endTime: string; openingProtocol?: string; closingProtocol?: string } }[]) => {
           const mine = list.find((a) => a.userId === me.id);
           if (mine) {
-            setShiftInfo({ name: mine.shift.name, startTime: mine.shift.startTime, endTime: mine.shift.endTime, role: mine.role });
+            let openingSteps: string[] = [];
+            let closingSteps: string[] = [];
+            try { openingSteps = JSON.parse(mine.shift.openingProtocol || '[]'); } catch {}
+            try { closingSteps = JSON.parse(mine.shift.closingProtocol || '[]'); } catch {}
+            setShiftInfo({ name: mine.shift.name, startTime: mine.shift.startTime, endTime: mine.shift.endTime, role: mine.role, openingSteps, closingSteps });
           }
           return fetch(`/api/sales?date=${today}`).then((r) => r.json());
         });
@@ -309,6 +315,32 @@ export default function TurnoPage() {
           <p className="text-xs text-grey">
             Tienes el turno <span className="font-medium text-dark">{shiftInfo.name}</span> ({shiftInfo.startTime} - {shiftInfo.endTime}) como {shiftInfo.role === 'COCINERO' ? 'Cocinero' : 'Anotador'}
           </p>
+          {shiftInfo.openingSteps.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[11px] font-medium text-sage mb-1">Protocolo de apertura:</p>
+              <div className="space-y-0.5">
+                {shiftInfo.openingSteps.map((step, i) => (
+                  <p key={i} className="text-[11px] text-grey flex items-center gap-1.5">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sage/20 text-[9px] text-sage">{i + 1}</span>
+                    {step}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {shiftInfo.closingSteps.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[11px] font-medium text-amber-600 mb-1">Protocolo de cierre:</p>
+              <div className="space-y-0.5">
+                {shiftInfo.closingSteps.map((step, i) => (
+                  <p key={i} className="text-[11px] text-grey flex items-center gap-1.5">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500/20 text-[9px] text-amber-600">{i + 1}</span>
+                    {step}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="border-b border-dark/10 bg-dark/[0.02] px-4 py-2.5">
