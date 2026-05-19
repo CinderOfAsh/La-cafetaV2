@@ -82,6 +82,7 @@ export default function TurnoPage() {
   const [showSaleModal, setShowSaleModal] = useState<Product | null>(null);
   const [showProtocolModal, setShowProtocolModal] = useState<{ name: string; steps: string[] } | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
+  const [userName, setUserName] = useState<string>('');
   const [shiftInfo, setShiftInfo] = useState<ShiftInfo | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -108,6 +109,7 @@ export default function TurnoPage() {
     ])
       .then(([me, p]) => {
         setUserId(me.id);
+        setUserName(me.name || '');
         setProducts(p);
 
         const today = new Date().toISOString().slice(0, 10);
@@ -298,7 +300,28 @@ export default function TurnoPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-53px)] gap-4 overflow-hidden p-4">
+    <div className="flex h-[calc(100vh-53px)] flex-col overflow-hidden">
+      {shiftInfo ? (
+        <div className="border-b border-sage/20 bg-sage/5 px-4 py-2.5">
+          <p className="text-sm font-semibold text-dark">
+            Bienvenido, {userName}
+          </p>
+          <p className="text-xs text-grey">
+            Tienes el turno <span className="font-medium text-dark">{shiftInfo.name}</span> ({shiftInfo.startTime} - {shiftInfo.endTime}) como {shiftInfo.role === 'COCINERO' ? 'Cocinero' : 'Anotador'}
+          </p>
+        </div>
+      ) : (
+        <div className="border-b border-dark/10 bg-dark/[0.02] px-4 py-2.5">
+          <p className="text-sm font-semibold text-dark">
+            Bienvenido, {userName}
+          </p>
+          <p className="text-xs text-light-grey">
+            No tienes turno asignado hoy. Puedes realizar ventas de todas formas.
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-1 gap-4 overflow-hidden p-4">
       {/* PIZARRA */}
       <div ref={boardRef} className={`relative flex-1 overflow-hidden rounded-2xl border border-dark/10 ${activeColor?.board || 'bg-page'}`}>
         {/* Bookmark tabs */}
@@ -589,6 +612,7 @@ export default function TurnoPage() {
             {t.message}
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

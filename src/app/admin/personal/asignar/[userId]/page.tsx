@@ -29,12 +29,27 @@ interface ExistingAssignment {
   shift: { name: string; startTime: string; endTime: string };
 }
 
+interface AllAssignment {
+  id: number;
+  shiftId: number;
+  date: string;
+  userId: number;
+}
+
 interface PendingChange {
   action: 'create' | 'delete';
   id?: number;
   shiftId?: number;
   role?: string;
 }
+
+interface Toast {
+  id: number;
+  message: string;
+  type: 'error' | 'success';
+}
+
+let toastIdCounter = 0;
 
 const monthNames = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -61,7 +76,9 @@ export default function AsignarTurnosPage() {
   const [employee, setEmployee] = useState<{ id: number; name: string } | null>(null);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [existingAssignments, setExistingAssignments] = useState<ExistingAssignment[]>([]);
+  const [allAssignments, setAllAssignments] = useState<AllAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -85,9 +102,13 @@ export default function AsignarTurnosPage() {
       const lastDay = getDaysInMonth(year, month);
       const end = dateStr(year, month, lastDay);
 
-      return fetch(`/api/shift-assignments?userId=${userId}&startDate=${start}&endDate=${end}`)
-        .then((r) => r.json())
-        .then((list: ExistingAssignment[]) => setExistingAssignments(list));
+      return Promise.all([
+        fetch(`/api/shift-assignments?userId=${userId}&startDate=${start}&endDate=${end}`).then((r) => r.json()),
+        fetch(`/api/shift-assignments?startDate=${start}&endDate=${end}`).then((r) => r.json()),
+      ]).then(([userList, allList]) => {
+        setExistingAssignments(userList);
+        setAllAssignments(allList);
+      });
     }).finally(() => setLoading(false));
   }, [userId, year, month]);
 
@@ -113,6 +134,16 @@ export default function AsignarTurnosPage() {
     const existing = existingAssignments.find((a) => a.date === date);
     if (existing && pending[existing.date]?.action !== 'delete') return existing;
     return undefined;
+  }
+
+  function getOccupancyForShift(shiftId: number, date: string): number {
+    return allAssignments.filter((a) => a.shiftId === shiftId && a.date === date).length;
+  }
+
+  function showToast(message: string, type: 'error' | 'success') {
+    const id = ++toastIdCounter;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }
 
   function startEdit(date: string, existing?: ExistingAssignment) {
@@ -186,8 +217,16 @@ export default function AsignarTurnosPage() {
       const start = dateStr(year, month, 1);
       const lastDay = getDaysInMonth(year, month);
       const end = dateStr(year, month, lastDay);
-      const list = await fetch(`/api/shift-assignments?userId=${userId}&startDate=${start}&endDate=${end}`).then((r) => r.json());
-      setExistingAssignments(list);
+      const [userList, allList] = await Promise.all([
+        fetch(`/api/shift-assignments?userId=${userId}&startDate=${start}&endDate=${end}`).then((r) => r.json()),
+        fetch(`/api/shift-assignments?startDate=${start}&endDate=${end}`).then((r) => r.json()),
+      ]);
+      setExistingAssignments(userList);
+      setAllAssignments(allList);
+      showToast('Cambios guardados correctamente', 'success');
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || 'Error al guardar los cambios', 'error');
     }
   }
 
@@ -277,6 +316,24 @@ export default function AsignarTurnosPage() {
                         <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
                       )}
                     </div>
+
+                    {!isEditing && (
+                      <div className="mb-1 space-y-0.5">
+                        {availableShifts.map((s) => {
+                          const occ = getOccupancyForShift(s.id, d);
+                          const isAssigned = assignment?.shiftId === s.id;
+                          const color = occ === 0 ? 'bg-green-500/20 text-green-700 border-green-500/30' : occ === 1 ? 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30' : 'bg-red-500/20 text-red-700 border-red-500/30';
+                          const dot = occ === 0 ? 'bg-green-500' : occ === 1 ? 'bg-yellow-500' : 'bg-red-500';
+                          return (
+                            <div key={s.id} className={`flex items-center gap-1 rounded border px-1 py-0.5 text-[9px] ${isAssigned ? 'ring-1 ring-sage' : ''} ${color}`}>
+                              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+                              <span className="truncate font-medium">{s.name}</span>
+                              <span className="ml-auto opacity-70">{occ}/2</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {isEditing ? (
                       <div className="space-y-1">
@@ -378,6 +435,23 @@ export default function AsignarTurnosPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {toasts.length > 0 && (
+        <div className="fixed bottom-20 right-4 z-50 space-y-2">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className={`rounded-lg px-4 py-2 text-sm shadow-lg border ${
+                t.type === 'error'
+                  ? 'bg-red-50 text-red-700 border-red-200'
+                  : 'bg-green-50 text-green-700 border-green-200'
+              }`}
+            >
+              {t.message}
+            </div>
+          ))}
         </div>
       )}
     </div>

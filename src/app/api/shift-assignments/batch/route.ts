@@ -17,6 +17,17 @@ export async function POST(request: NextRequest) {
       await prisma.shiftAssignment.delete({ where: { id: item.id } });
       deleted.push(item.id);
     } else if (item.action === "create") {
+      const count = await prisma.shiftAssignment.count({
+        where: { shiftId: item.shiftId, date: item.date },
+      });
+
+      if (count >= 2) {
+        return Response.json(
+          { error: "This shift is full (max 2 people assigned)" },
+          { status: 400 }
+        );
+      }
+
       const a = await prisma.shiftAssignment.create({
         data: {
           shiftId: item.shiftId,

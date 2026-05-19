@@ -30,6 +30,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const { shiftId, userId, date, role } = await request.json();
 
+  const count = await prisma.shiftAssignment.count({
+    where: { shiftId, date },
+  });
+
+  if (count >= 2) {
+    return Response.json(
+      { error: "This shift is full (max 2 people assigned)" },
+      { status: 400 }
+    );
+  }
+
   const assignment = await prisma.shiftAssignment.create({
     data: { shiftId, userId, date, role: role || "ANOTADOR" },
     include: { shift: true, user: { select: { id: true, name: true } } },
