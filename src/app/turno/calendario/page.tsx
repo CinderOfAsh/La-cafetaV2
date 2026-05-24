@@ -64,6 +64,7 @@ export default function CalendarioPage() {
 
   const [swapModal, setSwapModal] = useState<SwapData | null>(null);
   const [swapPartner, setSwapPartner] = useState('');
+  const [swapWhoAmI, setSwapWhoAmI] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -111,16 +112,18 @@ export default function CalendarioPage() {
   }
 
   function openSwap(a: Assignment, type: 'swap' | 'substitute') {
-    setSwapModal({ type, assignmentId: a.id, date: a.date, shiftName: a.shift.name, myName, myUserId: myId!, partnerId: 0, partnerName: '' });
+    setSwapWhoAmI('');
     setSwapPartner('');
+    setSwapModal({ type, assignmentId: a.id, date: a.date, shiftName: a.shift.name, myName, myUserId: myId!, partnerId: 0, partnerName: '' });
   }
 
   async function confirmSwap() {
-    if (!swapModal || !swapPartner) return;
+    if (!swapModal || !swapPartner || !swapWhoAmI) return;
+    const originalUserId = parseInt(swapWhoAmI);
     const partnerId = parseInt(swapPartner);
     const body = swapModal.type === 'swap'
-      ? { originalUserId: swapModal.myUserId, replacementUserId: partnerId, shiftAssignmentId: swapModal.assignmentId, type: 'SWAP' }
-      : { originalUserId: swapModal.myUserId, replacementUserId: partnerId, shiftAssignmentId: swapModal.assignmentId, type: 'SUBSTITUTE' };
+      ? { originalUserId, replacementUserId: partnerId, shiftAssignmentId: swapModal.assignmentId, type: 'SWAP' }
+      : { originalUserId, replacementUserId: partnerId, shiftAssignmentId: swapModal.assignmentId, type: 'SUBSTITUTE' };
 
     const res = await fetch('/api/shift-swaps', {
       method: 'POST',
@@ -190,17 +193,17 @@ export default function CalendarioPage() {
                     <div key={idx} className={`min-h-28 border-b border-r border-dark/5 p-1.5 ${isToday ? 'bg-sage/5' : ''}`}>
                       <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${isToday ? 'bg-sage text-white' : 'text-light-grey'}`}>{day}</span>
                       <div className="mt-1 space-y-0.5">
-                        {dayAssignments.slice(0, 2).map((a) => (
+                        {dayAssignments.map((a) => (
                           <button
                             key={a.id}
                             onClick={() => openSwap(a, 'swap')}
-                            className={`w-full truncate rounded px-1.5 py-0.5 text-[10px] text-left ${a.userId === myId ? 'bg-sage-light text-dark' : 'bg-blue-50 text-blue-600'}`}
-                            title={`${a.shift.name} — ${a.user.name} (${a.role})`}
+                            className={`w-full truncate rounded px-1.5 py-0.5 text-[10px] text-left ${a.userId === myId ? 'bg-sage-light text-dark' : 'bg-transparent border border-dark/10 text-dark'}`}
+                            title={`${a.shift.name} — ${a.user.name} (${a.role === 'COCINERO' ? 'Cocinero' : 'Anotador'})`}
                           >
-                            {a.shift.name} · {a.user.name}
+                            {a.shift.name} · {a.user.name} ({a.role === 'COCINERO' ? '🧑‍🍳' : '📝'})
                           </button>
                         ))}
-                        {dayAssignments.length > 2 && <p className="text-[10px] text-light-grey">+{dayAssignments.length - 2} más</p>}
+                        {dayAssignments.length === 0 && <p className="text-[10px] text-light-grey">—</p>}
                       </div>
                     </div>
                   );
@@ -244,9 +247,10 @@ export default function CalendarioPage() {
                           <button
                             key={a.id}
                             onClick={() => openSwap(a, 'swap')}
-                            className={`w-full rounded px-1 py-0.5 text-[10px] ${a.userId === myId ? 'bg-sage-light text-dark' : 'bg-blue-50 text-blue-600'}`}
+                            className={`w-full rounded px-1 py-0.5 text-[10px] text-left ${a.userId === myId ? 'bg-sage-light text-dark' : 'bg-transparent border border-dark/10 text-dark'}`}
                           >
-                            {a.shift.name}
+                            <span className="font-medium">{a.shift.name}</span>
+                            <span className="block text-[9px] opacity-60">{a.user.name}</span>
                           </button>
                         ))}
                       </div>
@@ -307,22 +311,32 @@ export default function CalendarioPage() {
             </div>
 
             {swapModal.type === 'swap' && (
-              <div className="mb-4 space-y-2">
-                <div className="flex items-center gap-2 rounded-lg border border-dark/10 bg-dark/5 px-3 py-2 text-sm">
-                  <span className="font-medium text-dark">{swapModal.myName}</span>
-                  <span className="text-xs text-light-grey">→ mantiene rol</span>
+              <div className="mb-4 space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs text-light-grey">¿Quién eres?</label>
+                  <select
+                    value={swapWhoAmI}
+                    onChange={(e) => setSwapWhoAmI(e.target.value)}
+                    className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark"
+                  >
+                    <option value="">Seleccionar...</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex items-center justify-center text-light-grey">
                   <RotateCcw className="h-4 w-4" />
                 </div>
-                <div className="flex items-center gap-2 rounded-lg border border-sage/20 bg-sage/5 px-3 py-2 text-sm">
+                <div>
+                  <label className="mb-1 block text-xs text-light-grey">¿Con quién intercambias?</label>
                   <select
                     value={swapPartner}
                     onChange={(e) => setSwapPartner(e.target.value)}
-                    className="flex-1 bg-transparent text-sm text-dark outline-none"
+                    className="w-full rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark"
                   >
-                    <option value="">Seleccionar compañero...</option>
-                    {users.filter((u) => u.id !== myId).map((u) => (
+                    <option value="">Seleccionar...</option>
+                    {users.filter((u) => String(u.id) !== swapWhoAmI).map((u) => (
                       <option key={u.id} value={u.id}>{u.name}</option>
                     ))}
                   </select>
@@ -351,10 +365,10 @@ export default function CalendarioPage() {
 
             <button
               onClick={confirmSwap}
-              disabled={!swapPartner}
+              disabled={!swapPartner || !swapWhoAmI}
               className="btn-sage w-full text-sm"
             >
-              Confirmar
+              Confirmar intercambio
             </button>
           </div>
         </div>
