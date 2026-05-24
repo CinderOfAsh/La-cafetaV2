@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "Sistema de gestión de cantina",
 };
 
+export const revalidate = 0;
+
 export default function RootLayout({
   children,
 }: Readonly<{
