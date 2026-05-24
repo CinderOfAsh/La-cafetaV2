@@ -3,8 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { type NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl;
+  const role = searchParams.get("role");
+  const active = searchParams.get("active");
+
+  const where: Record<string, unknown> = {};
+  if (role) where.role = role;
+  if (active === "true") where.isActive = true;
+
   const users = await prisma.user.findMany({
+    where,
     select: {
       id: true,
       name: true,
@@ -14,7 +23,7 @@ export async function GET() {
       customFields: true,
       createdAt: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { name: "asc" },
   });
   return Response.json(users);
 }

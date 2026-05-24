@@ -13,9 +13,11 @@ export async function GET(request: NextRequest) {
   const products = await prisma.product.findMany({
     where,
     include: {
-      inventory: { select: { stock: true, minStock: true, unit: true } },
-      recipes: {
-        include: { rawMaterial: true },
+      inventory: { select: { id: true, stock: true, minStock: true, unit: true } },
+      ingredients: {
+        include: {
+          inventory: { select: { id: true, name: true, stock: true, unit: true } },
+        },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { name, price, tags, imageUrl, description, customFields } = await request.json();
+  const { name, price, tags, imageUrl, description, customFields, ingredients } = await request.json();
 
   const product = await prisma.product.create({
     data: {
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
 
   await prisma.inventory.create({
     data: {
+      name: name,
       productId: product.id,
       stock: 0,
       minStock: 5,
@@ -47,5 +50,30 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return Response.json(product, { status: 201 });
+  if (ingredients && Array.isArray(ingredients) && ingredients.length > 0) {
+    for (const ing of ingredients) {
+      await prisma.productIngredient.create({
+        data: {
+          productId: product.id,
+          inventoryId: ing.inventoryId,
+          quantity: ing.quantity ?? 1,
+          unit: ing.unit || "unidad",
+        },
+      });
+    }
+  }
+
+  const fullProduct = await prisma.product.findUnique({
+    where: { id: product.id },
+    include: {
+      inventory: { select: { id: true, stock: true, minStock: true, unit: true } },
+      ingredients: {
+        include: {
+          inventory: { select: { id: true, name: true, stock: true, unit: true } },
+        },
+      },
+    },
+  });
+
+  return Response.json(fullProduct, { status: 201 });
 }

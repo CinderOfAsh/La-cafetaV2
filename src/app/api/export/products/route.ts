@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const products = await prisma.product.findMany({
-    include: { inventory: true },
+    include: {
+      inventory: true,
+      ingredients: { include: { inventory: { select: { name: true, unit: true } } } },
+    },
     orderBy: { name: "asc" },
   });
 
@@ -16,6 +19,7 @@ export async function GET() {
   });
 
   const rows = products.map((p) => {
+    const ingredientNames = p.ingredients?.map((i: any) => `${i.inventory.name} x${i.quantity}`).join(", ") || "";
     const row: Record<string, string | number | boolean> = {
       Nombre: p.name,
       Precio: p.price,
@@ -25,6 +29,7 @@ export async function GET() {
       Stock: p.inventory?.stock ?? 0,
       StockMinimo: p.inventory?.minStock ?? 0,
       Unidad: p.inventory?.unit ?? "unidad",
+      Ingredientes: ingredientNames,
     };
     try {
       const cf = JSON.parse(p.customFields);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ShoppingCart,
   CheckCircle2,
@@ -77,6 +78,7 @@ const GAP = 12;
 const TAB_H = 36;
 
 export default function TurnoPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +89,11 @@ export default function TurnoPage() {
   const [userName, setUserName] = useState<string>('');
   const [shiftInfo, setShiftInfo] = useState<ShiftInfo | null>(null);
   const [saving, setSaving] = useState(false);
+  const [turnoOpen, setTurnoOpen] = useState(false);
+  const [showOpeningModal, setShowOpeningModal] = useState(false);
+  const [showClosingModal, setShowClosingModal] = useState(false);
+  const [openingChecked, setOpeningChecked] = useState<boolean[]>([]);
+  const [closingChecked, setClosingChecked] = useState<boolean[]>([]);
 
   const [positions, setPositions] = useState<Record<number, Pos>>({});
   const [dragging, setDragging] = useState<number | null>(null);
@@ -115,14 +122,26 @@ export default function TurnoPage() {
         setProducts(p);
 
         const today = new Date().toISOString().slice(0, 10);
-        return fetch(`/api/shift-assignments?date=${today}`).then((r) => r.json()).then((list: { shiftId: number; date: string; role: string; userId: number; shift: { name: string; startTime: string; endTime: string; openingProtocol?: string; closingProtocol?: string } }[]) => {
-          const mine = list.find((a) => a.userId === me.id);
-          if (mine) {
+        return fetch(`/api/shift-assignments?date=${today}`).then((r) => r.json()).then((list: { shiftId: number; date: string; role: string; userId: number; user: { id: number; name: string }; shift: { name: string; startTime: string; endTime: string; openingProtocol?: string; closingProtocol?: string } }[]) => {
+          // Show the first assignment for today regardless of who logged in
+          const assignment = list.length > 0 ? list[0] : null;
+          if (assignment) {
             let openingSteps: string[] = [];
             let closingSteps: string[] = [];
-            try { openingSteps = JSON.parse(mine.shift.openingProtocol || '[]'); } catch {}
-            try { closingSteps = JSON.parse(mine.shift.closingProtocol || '[]'); } catch {}
-            setShiftInfo({ name: mine.shift.name, startTime: mine.shift.startTime, endTime: mine.shift.endTime, role: mine.role, openingSteps, closingSteps });
+            try { openingSteps = JSON.parse(assignment.shift.openingProtocol || '[]'); } catch {}
+            try { closingSteps = JSON.parse(assignment.shift.closingProtocol || '[]'); } catch {}
+            setShiftInfo({ name: assignment.shift.name, startTime: assignment.shift.startTime, endTime: assignment.shift.endTime, role: assignment.role, openingSteps, closingSteps });
+            // If there's an opening protocol, show the opening checklist modal
+            if (openingSteps.length > 0) {
+              setOpeningChecked(new Array(openingSteps.length).fill(false));
+              setShowOpeningModal(true);
+            } else {
+              setTurnoOpen(true);
+            }
+            // Override userName with the actual assigned person
+            if (assignment.user?.name) {
+              setUserName(assignment.user.name);
+            }
           }
           return fetch(`/api/sales?date=${today}`).then((r) => r.json());
         });
@@ -308,39 +327,33 @@ export default function TurnoPage() {
   return (
     <div className="flex h-[calc(100vh-53px)] flex-col overflow-hidden">
       {shiftInfo ? (
-        <div className="border-b border-sage/20 bg-sage/5 px-4 py-2.5">
-          <p className="text-sm font-semibold text-dark">
-            Bienvenido, {userName}
-          </p>
-          <p className="text-xs text-grey">
-            Tienes el turno <span className="font-medium text-dark">{shiftInfo.name}</span> ({shiftInfo.startTime} - {shiftInfo.endTime}) como {shiftInfo.role === 'COCINERO' ? 'Cocinero' : 'Anotador'}
-          </p>
-          {shiftInfo.openingSteps.length > 0 && (
-            <div className="mt-2">
-              <p className="text-[11px] font-medium text-sage mb-1">Protocolo de apertura:</p>
-              <div className="space-y-0.5">
-                {shiftInfo.openingSteps.map((step, i) => (
-                  <p key={i} className="text-[11px] text-grey flex items-center gap-1.5">
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sage/20 text-[9px] text-sage">{i + 1}</span>
-                    {step}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-          {shiftInfo.closingSteps.length > 0 && (
-            <div className="mt-2">
-              <p className="text-[11px] font-medium text-amber-600 mb-1">Protocolo de cierre:</p>
-              <div className="space-y-0.5">
-                {shiftInfo.closingSteps.map((step, i) => (
-                  <p key={i} className="text-[11px] text-grey flex items-center gap-1.5">
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500/20 text-[9px] text-amber-600">{i + 1}</span>
-                    {step}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="flex items-center justify-between border-b border-sage/20 bg-sage/5 px-4 py-2">
+          <div>
+            <p className="text-sm font-semibold text-dark">
+              Turno de <span className="text-sage">{userName}</span>
+            </p>
+            <p className="text-xs text-grey">
+              {shiftInfo.name} ({shiftInfo.startTime} - {shiftInfo.endTime}) · {shiftInfo.role === 'COCINERO' ? 'Cocinero' : 'Anotador'}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {shiftInfo.openingSteps.length > 0 && (
+              <button
+                onClick={() => setShowProtocolModal({ name: 'Apertura de turno', steps: shiftInfo.openingSteps })}
+                className="flex items-center gap-1.5 rounded-full bg-sage/15 px-3 py-1.5 text-xs font-medium text-sage hover:bg-sage/25"
+              >
+                📋 Apertura
+              </button>
+            )}
+            {shiftInfo.closingSteps.length > 0 && (
+              <button
+                onClick={() => setShowProtocolModal({ name: 'Cierre de turno', steps: shiftInfo.closingSteps })}
+                className="flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-600 hover:bg-amber-500/25"
+              >
+                📋 Cierre
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="border-b border-dark/10 bg-dark/[0.02] px-4 py-2.5">
@@ -348,7 +361,7 @@ export default function TurnoPage() {
             Bienvenido, {userName}
           </p>
           <p className="text-xs text-light-grey">
-            No tienes turno asignado hoy. Puedes realizar ventas de todas formas.
+            No hay turno asignado hoy.
           </p>
         </div>
       )}
@@ -380,7 +393,7 @@ export default function TurnoPage() {
         </div>
 
         {/* Header */}
-        <div className="absolute left-0 right-0 z-10 flex items-center gap-3 px-4" style={{ top: TAB_H }}>
+        <div className="absolute left-0 right-0 z-10 flex items-center gap-2 px-4" style={{ top: TAB_H }}>
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-light-grey" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar producto..." className="w-full rounded-lg border border-dark/10 bg-dark/5 pl-10 pr-8 py-2 text-sm text-dark placeholder-light-grey" />
@@ -392,16 +405,31 @@ export default function TurnoPage() {
           </div>
           <Coffee className="h-5 w-5 text-sage" />
           <div>
-            <h1 className="text-lg font-bold text-dark capitalize">{todayFormatted}</h1>
+            <h1 className="text-lg font-bold text-dark">Mi Turno</h1>
             <p className="text-xs text-light-grey">
-              {shiftInfo
-                ? `Turno activo: ${shiftInfo.name} (${shiftInfo.startTime}–${shiftInfo.endTime}) · ${shiftInfo.role === 'COCINERO' ? 'Cocinero' : 'Anotador'}`
-                : 'Sin turno asignado — puedes vender igual'}
+              {todayFormatted}
+              {shiftInfo && ` · ${shiftInfo.name} (${shiftInfo.startTime}–${shiftInfo.endTime})`}
             </p>
           </div>
-          <button className="ml-auto flex items-center gap-1.5 rounded-lg border border-dark/10 px-3 py-1.5 text-xs text-light-grey hover:border-red-700 hover:text-red-400">
-            <X className="h-3.5 w-3.5" /> Cerrar Turno
-          </button>
+          {turnoOpen && (
+            <button
+              onClick={() => {
+                if (shiftInfo && shiftInfo.closingSteps.length > 0) {
+                  setClosingChecked(new Array(shiftInfo.closingSteps.length).fill(false));
+                  setShowClosingModal(true);
+                } else {
+                  if (confirm('¿Cerrar turno sin protocolo de cierre?')) {
+                    setTurnoOpen(false);
+                    toast('🔒 Turno cerrado');
+                    setTimeout(() => router.push('/hub-empleado'), 800);
+                  }
+                }
+              }}
+              className="ml-auto flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-500 hover:border-red-400 hover:bg-red-50"
+            >
+              <X className="h-3.5 w-3.5" /> Cerrar Turno
+            </button>
+          )}
         </div>
 
         {/* Products */}
@@ -433,7 +461,7 @@ export default function TurnoPage() {
                 </div>
                 <div className="mt-auto flex gap-1.5 pt-3">
                   <button
-                    onClick={() => setShowSaleModal(p)}
+                    onClick={() => !turnoOpen ? toast('📋 Completa el protocolo de apertura primero') : setShowSaleModal(p)}
                     disabled={saving}
                     className="btn-sage flex flex-1 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold disabled:opacity-50"
                   >
@@ -476,7 +504,7 @@ export default function TurnoPage() {
                   </div>
                   <div className="mt-auto flex gap-1.5 pt-3">
                     <button
-                      onClick={() => setShowSaleModal(p)}
+                      onClick={() => !turnoOpen ? toast('📋 Completa el protocolo de apertura primero') : setShowSaleModal(p)}
                       disabled={saving}
                       className="btn-sage flex flex-1 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold disabled:opacity-50"
                     >
@@ -590,6 +618,113 @@ export default function TurnoPage() {
           </div>
         </div>
       </div>
+
+      {/* OPENING MODAL */}
+      {showOpeningModal && shiftInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-dark/10 bg-page p-6">
+            <div className="mb-4 text-center">
+              <h2 className="text-lg font-bold text-dark">📋 Protocolo de apertura</h2>
+              <p className="text-xs text-grey mt-1">Completa todos los pasos para abrir el turno</p>
+            </div>
+            <div className="mb-6 space-y-2">
+              {shiftInfo.openingSteps.map((step, i) => (
+                <label key={i} className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all ${openingChecked[i] ? 'bg-sage/5 border-sage/30' : 'bg-dark/[0.02] border-dark/10'}`}>
+                  <input
+                    type="checkbox"
+                    checked={openingChecked[i] || false}
+                    onChange={() => setOpeningChecked((prev) => prev.map((v, j) => j === i ? !v : v))}
+                    className="mt-0.5 h-4 w-4 rounded border-dark/20 text-sage focus:ring-sage/30"
+                  />
+                  <div>
+                    <p className={`text-sm ${openingChecked[i] ? 'text-dark line-through opacity-60' : 'text-dark'}`}>{step}</p>
+                    <p className="text-[10px] text-light-grey mt-0.5">Paso {i + 1} de {shiftInfo.openingSteps.length}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                setTurnoOpen(true);
+                setShowOpeningModal(false);
+                toast('🔓 Turno abierto correctamente');
+              }}
+              disabled={!openingChecked.every(Boolean)}
+              className="btn-sage w-full text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {openingChecked.every(Boolean) ? '✅ Abrir Turno' : `Marca los ${shiftInfo.openingSteps.length} pasos para abrir`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CLOSING MODAL */}
+      {showClosingModal && shiftInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-dark/10 bg-page p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 text-center">
+              <h2 className="text-lg font-bold text-dark">🔒 Cierre de turno</h2>
+              <p className="text-xs text-grey mt-1">Completa el protocolo de cierre</p>
+            </div>
+
+            {/* Sales summary */}
+            <div className="mb-4 rounded-xl bg-sage/5 border border-sage/20 p-3">
+              <p className="text-xs font-semibold text-sage mb-2">Resumen de ventas del turno</p>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between text-dark">
+                  <span>Total vendido</span>
+                  <span className="font-bold text-sage">${totalSales.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-grey text-xs">
+                  <span>Efectivo</span>
+                  <span>${totalCash.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-grey text-xs">
+                  <span>Datáfono</span>
+                  <span>${totalCard.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-grey text-xs">
+                  <span>Comandas entregadas</span>
+                  <span>{comandas.filter((c) => c.status === 'DELIVERED').length}</span>
+                </div>
+              </div>
+            </div>
+
+            {shiftInfo.closingSteps.length > 0 && (
+              <div className="mb-6 space-y-2">
+                <p className="text-xs font-medium text-amber-600 mb-2">Protocolo de cierre:</p>
+                {shiftInfo.closingSteps.map((step, i) => (
+                  <label key={i} className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all ${closingChecked[i] ? 'bg-amber-50 border-amber-300' : 'bg-dark/[0.02] border-dark/10'}`}>
+                    <input
+                      type="checkbox"
+                      checked={closingChecked[i] || false}
+                      onChange={() => setClosingChecked((prev) => prev.map((v, j) => j === i ? !v : v))}
+                      className="mt-0.5 h-4 w-4 rounded border-dark/20 text-amber-500 focus:ring-amber-300"
+                    />
+                    <p className={`text-sm ${closingChecked[i] ? 'text-dark line-through opacity-60' : 'text-dark'}`}>{step}</p>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setTurnoOpen(false);
+                setShowClosingModal(false);
+                toast('🔒 Turno cerrado correctamente');
+                setTimeout(() => router.push('/hub-empleado'), 800);
+              }}
+              disabled={shiftInfo.closingSteps.length > 0 && !closingChecked.every(Boolean)}
+              className="btn-sage w-full text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: '#D97706' }}
+            >
+              {shiftInfo.closingSteps.length > 0 && !closingChecked.every(Boolean)
+                ? `Completa los ${shiftInfo.closingSteps.length} pasos para cerrar`
+                : '🔒 Cerrar Turno'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* SALE MODAL */}
       {showSaleModal && (

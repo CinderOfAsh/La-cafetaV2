@@ -45,11 +45,35 @@ async function handleSeed() {
       await prisma.inventory.upsert({
         where: { id: inv.id },
         update: {},
-        create: { id: inv.id, productId: inv.productId, stock: inv.stock ?? 0, minStock: inv.minStock ?? 5, unit: inv.unit || "unidad", customFields: inv.customFields || "{}" },
+        create: {
+          id: inv.id,
+          name: inv.name || "",
+          productId: inv.productId || null,
+          stock: inv.stock ?? 0,
+          minStock: inv.minStock ?? 5,
+          unit: inv.unit || "unidad",
+          customFields: inv.customFields || "{}",
+        },
       });
     }
 
-    return Response.json({ message: "Base de datos inicializada", products: seed.Product?.length || 0, inventory: seed.Inventory?.length || 0 });
+    for (const pi of (seed.ProductIngredient || [])) {
+      await prisma.productIngredient.create({
+        data: {
+          productId: pi.productId,
+          inventoryId: pi.inventoryId,
+          quantity: pi.quantity ?? 1,
+          unit: pi.unit || "unidad",
+        },
+      });
+    }
+
+    return Response.json({
+      message: "Base de datos inicializada",
+      products: seed.Product?.length || 0,
+      inventory: seed.Inventory?.length || 0,
+      ingredients: seed.ProductIngredient?.length || 0,
+    });
   } catch (e) {
     return Response.json({ error: String(e) }, { status: 500 });
   }

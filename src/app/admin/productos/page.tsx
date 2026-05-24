@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Plus, Pencil, AlertTriangle, Download, Trash2, FileText, ScrollText, ArrowUp, ArrowDown, Search, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Pencil, AlertTriangle, Download, Trash2, FileText, ScrollText, ArrowUp, ArrowDown, Search, X, Package } from 'lucide-react';
 import { downloadCsv } from '@/lib/export-csv';
 
 interface Product {
@@ -13,16 +13,20 @@ interface Product {
   description: string;
   isActive: boolean;
   customFields: string;
-  inventory: { stock: number; minStock: number; unit: string } | null;
+  inventory: { id: number; stock: number; minStock: number; unit: string } | null;
+  ingredients: { id: number; inventoryId: number; quantity: number; unit: string; inventory: { id: number; name: string; stock: number; unit: string } }[];
 }
 
 interface InvItem {
   id: number;
+  name: string;
   stock: number;
   minStock: number;
   unit: string;
   customFields: string;
-  product: { id: number; name: string; price: number; isActive: boolean };
+  productId: number | null;
+  product: { id: number; name: string; price: number; isActive: boolean } | null;
+  usedIn: { product: { id: number; name: string } }[];
 }
 
 interface CustomField {
@@ -54,14 +58,16 @@ export default function AdminProductosPage() {
   const [editMin, setEditMin] = useState('');
   const [invCustomFields, setInvCustomFields] = useState<CustomField[]>([]);
 
-  const [recipeMaterials, setRecipeMaterials] = useState<{ rawMaterialId: number; quantity: number }[]>([]);
-  const [rawMaterials, setRawMaterials] = useState<{ id: number; name: string; stock: number; unit: string }[]>([]);
+  const [ingredients, setIngredients] = useState<{ inventoryId: number; quantity: number; unit: string }[]>([]);
 
   const [showCocinaModal, setShowCocinaModal] = useState(false);
   const [cocinaProductId, setCocinaProductId] = useState<number | null>(null);
   const [cocinaProductName, setCocinaProductName] = useState('');
   const [cocinaSteps, setCocinaSteps] = useState<string[]>(['']);
   const [cocinaProtocolId, setCocinaProtocolId] = useState<number | null>(null);
+
+  const [showNewMaterial, setShowNewMaterial] = useState(false);
+  const [newMaterial, setNewMaterial] = useState({ name: '', stock: '', minStock: '5', unit: 'unidad' });
 
   const [search, setSearch] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -77,12 +83,10 @@ export default function AdminProductosPage() {
     Promise.all([
       fetch('/api/products').then((r) => r.json()),
       fetch('/api/inventory').then((r) => r.json()),
-      fetch('/api/raw-materials').then((r) => r.json()),
     ])
-      .then(([p, i, rm]) => {
+      .then(([p, i]) => {
         setProducts(p);
         setInvItems(i);
-        setRawMaterials(rm);
       })
       .finally(() => setLoading(false));
   }
@@ -93,7 +97,7 @@ export default function AdminProductosPage() {
     setEditing(null);
     setForm({ name: '', price: '', tags: '', description: '', imageUrl: '' });
     setCustomFields([]);
-    setRecipeMaterials([]);
+    setIngredients([]);
     setShowForm(true);
     setError('');
   }
@@ -102,7 +106,7 @@ export default function AdminProductosPage() {
     setEditing(p);
     const parsedTags = (() => { try { return JSON.parse(p.tags).join(', '); } catch { return p.tags; } })();
     setForm({ name: p.name, price: String(p.price), tags: parsedTags, description: p.description, imageUrl: p.imageUrl });
-    setRecipeMaterials((p as any).recipes?.map((r: any) => ({ rawMaterialId: r.rawMaterialId, quantity: r.quantity })) || []);
+    setIngredients(p.ingredients?.map((ing) => ({ inventoryId: ing.inventoryId, quantity: ing.quantity, unit: ing.unit })) || []);
     try {
       const cf = JSON.parse(p.customFields || '{}');
       setCustomFields(typeof cf === 'object' && cf !== null && !Array.isArray(cf) ? Object.entries(cf).map(([key, value]) => ({ key, value: String(value) })) : []);
@@ -127,6 +131,7 @@ export default function AdminProductosPage() {
       description: form.description,
       imageUrl: form.imageUrl,
       customFields: cfObj,
+      ingredients: ingredients.filter((i) => i.inventoryId > 0),
     };
 
     const url = editing ? `/api/products/${editing.id}` : '/api/products';
@@ -139,26 +144,6 @@ export default function AdminProductosPage() {
     });
 
     if (res.ok) {
-      const saved = await res.json();
-
-      // Sync recipes if editing and there are recipe materials
-      if (editing && recipeMaterials.length > 0) {
-        // Delete existing recipes and re-create
-        const validRecipes = recipeMaterials.filter((rm) => rm.rawMaterialId > 0);
-        await fetch(`/api/products/${editing.id}/recipes`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rawMaterialId: 0 }),
-        });
-        for (const rm of validRecipes) {
-          await fetch(`/api/products/${editing.id}/recipes`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rawMaterialId: rm.rawMaterialId, quantity: rm.quantity }),
-          });
-        }
-      }
-
       toast(editing ? '✅ Producto actualizado' : '✅ Producto guardado');
       setShowForm(false);
       loadData();
@@ -202,8 +187,25 @@ export default function AdminProductosPage() {
     loadData();
   }
 
-  const activeInv = invItems.filter((i) => i.product.isActive);
-  const lowStock = activeInv.filter((i) => i.stock <= i.minStock);
+  async function createMaterial() {
+    if (!newMaterial.name.trim()) return;
+    await fetch('/api/inventory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: newMaterial.name,
+        stock: parseInt(newMaterial.stock) || 0,
+        minStock: parseInt(newMaterial.minStock) || 5,
+        unit: newMaterial.unit,
+      }),
+    });
+    setNewMaterial({ name: '', stock: '', minStock: '5', unit: 'unidad' });
+    setShowNewMaterial(false);
+    toast('✅ Material creado');
+    loadData();
+  }
+
+  const lowStock = invItems.filter((i) => i.stock <= i.minStock);
 
   async function exportProducts() {
     const res = await fetch('/api/export/products');
@@ -269,11 +271,14 @@ export default function AdminProductosPage() {
     : products;
 
   const filteredInv = search
-    ? activeInv.filter((item) => {
+    ? invItems.filter((item) => {
         const q = search.toLowerCase();
-        return item.product.name.toLowerCase().includes(q) || item.unit.toLowerCase().includes(q);
+        const itemName = item.product?.name || item.name || '';
+        return itemName.toLowerCase().includes(q) || item.unit.toLowerCase().includes(q);
       })
-    : activeInv;
+    : invItems;
+
+  const standaloneInvItems = invItems.filter((i) => !i.productId);
 
   return (
     <div>
@@ -389,47 +394,57 @@ export default function AdminProductosPage() {
                   </div>
                 </div>
 
-                {editing && (
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="text-sm text-light-grey">Materias Primas (receta)</label>
-                      <button type="button" onClick={() => setRecipeMaterials((prev) => [...prev, { rawMaterialId: 0, quantity: 1 }])} className="flex items-center gap-1 text-xs text-sage hover:text-dark">
-                        <Plus className="h-3 w-3" /> Añadir ingrediente
-                      </button>
-                    </div>
-                    {recipeMaterials.length === 0 && (
-                      <p className="text-xs text-light-grey">Este producto no tiene materias primas asociadas</p>
-                    )}
-                    <div className="space-y-2">
-                      {recipeMaterials.map((rm, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <select
-                            value={rm.rawMaterialId}
-                            onChange={(e) => setRecipeMaterials((prev) => prev.map((x, j) => j === i ? { ...x, rawMaterialId: parseInt(e.target.value) } : x))}
-                            className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark"
-                          >
-                            <option value={0}>Seleccionar materia prima...</option>
-                            {rawMaterials.map((mat) => (
-                              <option key={mat.id} value={mat.id}>{mat.name} ({mat.stock} {mat.unit})</option>
-                            ))}
-                          </select>
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0.1"
-                            value={rm.quantity}
-                            onChange={(e) => setRecipeMaterials((prev) => prev.map((x, j) => j === i ? { ...x, quantity: parseFloat(e.target.value) || 1 } : x))}
-                            className="w-20 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark"
-                            placeholder="Cant."
-                          />
-                          <button type="button" onClick={() => setRecipeMaterials((prev) => prev.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="text-sm text-light-grey">Ingredientes / Materiales</label>
+                    <button type="button" onClick={() => setIngredients((prev) => [...prev, { inventoryId: 0, quantity: 1, unit: 'unidad' }])} className="flex items-center gap-1 text-xs text-sage hover:text-dark">
+                      <Plus className="h-3 w-3" /> Añadir ingrediente
+                    </button>
                   </div>
-                )}
+                  {standaloneInvItems.length === 0 && ingredients.length === 0 && (
+                    <p className="text-xs text-light-grey">No hay materiales aún. Créelos desde la pestaña Inventario primero.</p>
+                  )}
+                  {ingredients.length === 0 && standaloneInvItems.length > 0 && (
+                    <p className="text-xs text-light-grey">Este producto no tiene ingredientes asociados</p>
+                  )}
+                  <div className="space-y-2">
+                    {ingredients.map((ing, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <select
+                          value={ing.inventoryId}
+                          onChange={(e) => setIngredients((prev) => prev.map((x, j) => j === i ? { ...x, inventoryId: parseInt(e.target.value) } : x))}
+                          className="flex-1 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark"
+                        >
+                          <option value={0}>Seleccionar material...</option>
+                          {standaloneInvItems.map((mat) => (
+                            <option key={mat.id} value={mat.id}>{mat.name} ({mat.stock} {mat.unit})</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          value={ing.quantity}
+                          onChange={(e) => setIngredients((prev) => prev.map((x, j) => j === i ? { ...x, quantity: parseFloat(e.target.value) || 1 } : x))}
+                          className="w-20 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark"
+                          placeholder="Cant."
+                        />
+                        <input
+                          value={ing.unit}
+                          onChange={(e) => setIngredients((prev) => prev.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))}
+                          className="w-20 rounded-lg border border-dark/10 bg-page px-3 py-1.5 text-sm text-dark"
+                          placeholder="Unidad"
+                        />
+                        <button type="button" onClick={() => setIngredients((prev) => prev.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {ingredients.length > 0 && (
+                    <p className="mt-1 text-xs text-light-grey">{ingredients.filter((i) => i.inventoryId > 0).length} ingrediente(s)</p>
+                  )}
+                </div>
 
                 <div className="flex gap-2">
                   <button type="submit" className="btn-sage text-sm">
@@ -474,6 +489,15 @@ export default function AdminProductosPage() {
                               <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-500">{cfCount} campos</span>
                             )}
                           </div>
+                          {p.ingredients && p.ingredients.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {p.ingredients.map((ing) => (
+                                <span key={ing.id} className="rounded-full bg-sage-light px-1.5 py-0.5 text-[10px] text-sage">
+                                  {ing.inventory.name} x{ing.quantity}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {(() => {
                             try {
                               const cf = JSON.parse(p.customFields || '{}');
@@ -526,7 +550,7 @@ export default function AdminProductosPage() {
                   );
                 })}
                 {filteredProducts.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-light-grey">{search ? 'Sin resultados para la búsqueda.' : 'No hay productos registrados.'}</td></tr>
+                  <tr key="empty-products"><td colSpan={6} className="px-4 py-8 text-center text-light-grey">{search ? 'Sin resultados para la búsqueda.' : 'No hay productos registrados.'}</td></tr>
                 )}
               </tbody>
             </table>
@@ -539,23 +563,50 @@ export default function AdminProductosPage() {
           <div className="mb-4 flex items-center gap-3">
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-light-grey" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por producto, unidad..." className="w-full rounded-lg border border-dark/10 pl-10 pr-3 py-2 text-sm text-dark placeholder-light-grey" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nombre, unidad..." className="w-full rounded-lg border border-dark/10 pl-10 pr-3 py-2 text-sm text-dark placeholder-light-grey" />
             </div>
             {lowStock.length > 0 && (
               <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-500">
                 <AlertTriangle className="h-3 w-3" />{lowStock.length} bajo mínimo
               </span>
             )}
+            <button onClick={() => setShowNewMaterial(true)} className="btn-sage text-sm">
+              <Plus className="h-4 w-4" /> Nuevo material
+            </button>
           </div>
+
+          {showNewMaterial && (
+            <div className="mb-4 rounded-xl border border-dark/10 bg-page p-4">
+              <h3 className="mb-3 text-sm font-semibold text-dark">Nuevo material</h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                <input value={newMaterial.name} onChange={(e) => setNewMaterial({ ...newMaterial, name: e.target.value })} className="rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder="Nombre" />
+                <input type="number" value={newMaterial.stock} onChange={(e) => setNewMaterial({ ...newMaterial, stock: e.target.value })} className="rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder="Stock" />
+                <input type="number" value={newMaterial.minStock} onChange={(e) => setNewMaterial({ ...newMaterial, minStock: e.target.value })} className="rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark" placeholder="Stock mínimo" />
+                <select value={newMaterial.unit} onChange={(e) => setNewMaterial({ ...newMaterial, unit: e.target.value })} className="rounded-lg border border-dark/10 bg-page px-3 py-2 text-sm text-dark">
+                  <option value="unidad">unidad</option>
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                  <option value="L">L</option>
+                  <option value="ml">ml</option>
+                  <option value="paquete">paquete</option>
+                </select>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button onClick={createMaterial} className="btn-sage text-sm">Crear</button>
+                <button onClick={() => setShowNewMaterial(false)} className="rounded-lg border border-dark/10 px-4 py-2 text-sm text-grey hover:bg-dark/5">Cancelar</button>
+              </div>
+            </div>
+          )}
 
           <div className="overflow-hidden rounded-xl border border-dark/10">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark/10 bg-dark/5">
-                  <th className="px-4 py-3 text-left font-medium text-light-grey">Producto</th>
-                  <th className="px-4 py-3 text-left font-medium text-light-grey">Precio</th>
+                  <th className="px-4 py-3 text-left font-medium text-light-grey">Nombre</th>
                   <th className="px-4 py-3 text-left font-medium text-light-grey">Stock</th>
                   <th className="px-4 py-3 text-left font-medium text-light-grey">Mínimo</th>
+                  <th className="px-4 py-3 text-left font-medium text-light-grey">Unidad</th>
+                  <th className="px-4 py-3 text-left font-medium text-light-grey">Producto vinculado</th>
                   <th className="px-4 py-3 text-right font-medium text-light-grey">Acciones</th>
                 </tr>
               </thead>
@@ -563,11 +614,11 @@ export default function AdminProductosPage() {
                 {filteredInv.map((item) => {
                   const isLow = item.stock <= item.minStock;
                   const isEditing = editingInv === item.id;
+                  const displayName = item.product?.name || item.name || 'Sin nombre';
                   return (
-                    <>
-                    <tr key={item.id} className={`border-b border-dark/5 hover:bg-dark/5 ${isLow ? 'bg-red-50' : ''}`}>
-                      <td className="px-4 py-3 text-dark">{item.product.name}</td>
-                      <td className="px-4 py-3 text-grey">${item.product.price.toFixed(2)}</td>
+                    <React.Fragment key={item.id}>
+                    <tr className={`border-b border-dark/5 hover:bg-dark/5 ${isLow ? 'bg-red-50' : ''}`}>
+                      <td className="px-4 py-3 text-dark">{displayName}</td>
                       <td className="px-4 py-3">
                         {isEditing ? (
                           <input type="number" value={editStock} onChange={(e) => setEditStock(e.target.value)} className="w-20 rounded border border-dark/10 bg-page px-2 py-1 text-sm text-dark" autoFocus />
@@ -580,6 +631,20 @@ export default function AdminProductosPage() {
                           <input type="number" value={editMin} onChange={(e) => setEditMin(e.target.value)} className="w-20 rounded border border-dark/10 bg-page px-2 py-1 text-sm text-dark" />
                         ) : (
                           <span className="text-light-grey">{item.minStock}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-grey">{item.unit}</td>
+                      <td className="px-4 py-3">
+                        {item.product ? (
+                          <span className="rounded-full bg-sage-light px-2 py-0.5 text-xs text-sage">{item.product.name}</span>
+                        ) : item.usedIn && item.usedIn.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.usedIn.map((u) => (
+                              <span key={u.product.id} className="rounded-full bg-dark/5 px-2 py-0.5 text-xs text-grey">{u.product.name}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-light-grey">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -595,11 +660,17 @@ export default function AdminProductosPage() {
                                 <Pencil className="h-4 w-4" />
                               </button>
                               <button onClick={async () => {
-                                if (!confirm(`¿Eliminar inventario de ${item.product.name}?`)) return;
-                                await fetch(`/api/inventory/${item.id}`, { method: 'DELETE' });
-                                toast('🗑 Inventario eliminado');
+                                const name = item.product?.name || item.name || 'este elemento';
+                                if (!confirm(`¿Eliminar ${name}?`)) return;
+                                const res = await fetch(`/api/inventory/${item.id}`, { method: 'DELETE' });
+                                if (res.ok) {
+                                  toast('🗑 Inventario eliminado');
+                                } else {
+                                  const data = await res.json();
+                                  toast(data.error || 'Error al eliminar');
+                                }
                                 loadData();
-                              }} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500" title="Eliminar inventario">
+                              }} className="rounded-lg p-1.5 text-light-grey hover:bg-red-50 hover:text-red-500" title="Eliminar">
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </>
@@ -630,11 +701,11 @@ export default function AdminProductosPage() {
                         </td>
                       </tr>
                     )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
                 {filteredInv.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-light-grey">{search ? 'Sin resultados para la búsqueda.' : 'No hay inventario registrado.'}</td></tr>
+                  <tr key="empty-inv"><td colSpan={6} className="px-4 py-8 text-center text-light-grey">{search ? 'Sin resultados para la búsqueda.' : 'No hay inventario registrado.'}</td></tr>
                 )}
               </tbody>
             </table>

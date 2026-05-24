@@ -7,6 +7,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const usedIn = await prisma.productIngredient.findMany({
+    where: { inventoryId: parseInt(id) },
+  });
+  if (usedIn.length > 0) {
+    return Response.json({ error: "Este material está siendo usado por productos" }, { status: 400 });
+  }
   await prisma.inventory.delete({
     where: { id: parseInt(id) },
   });
@@ -18,9 +24,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { stock, minStock, unit, customFields } = await request.json();
+  const { name, stock, minStock, unit, customFields } = await request.json();
 
   const data: Record<string, unknown> = {};
+  if (name !== undefined) data.name = name;
   if (stock !== undefined) data.stock = stock;
   if (minStock !== undefined) data.minStock = minStock;
   if (unit !== undefined) data.unit = unit;

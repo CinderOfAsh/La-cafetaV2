@@ -24,31 +24,33 @@ model User {
 }
 
 model Product {
-  id          Int        @id @default(autoincrement())
+  id          Int                 @id @default(autoincrement())
   name        String
   price       Float
   tags        String
-  imageUrl    String     @default("")
-  description String     @default("")
-  isActive    Boolean    @default(true)
-  customFields String   @default("{}")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  imageUrl    String              @default("")
+  description String              @default("")
+  isActive    Boolean             @default(true)
+  customFields String             @default("{}")
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   protocol    Protocol?
   inventory   Inventory?
   saleItems   SaleItem[]
-  recipes     ProductRecipe[]
+  ingredients ProductIngredient[]
 }
 
 model Inventory {
-  id           Int      @id @default(autoincrement())
-  productId    Int      @unique
-  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  stock        Int      @default(0)
-  minStock     Int      @default(5)
-  unit         String   @default("unidad")
-  customFields String   @default("{}")
-  updatedAt    DateTime @updatedAt
+  id           Int                 @id @default(autoincrement())
+  name         String              @default("")
+  productId    Int?                @unique
+  product      Product?            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stock        Int                 @default(0)
+  minStock     Int                 @default(5)
+  unit         String              @default("unidad")
+  customFields String              @default("{}")
+  updatedAt    DateTime            @updatedAt
+  usedIn       ProductIngredient[]
 }
 
 model Shift {
@@ -121,26 +123,16 @@ model SaleItem {
   createdAt   DateTime        @default(now())
 }
 
-model RawMaterial {
-  id          Int             @id @default(autoincrement())
-  name        String
-  unit        String          @default("unidad")
-  stock       Int             @default(0)
-  minStock    Int             @default(5)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  recipes     ProductRecipe[]
-}
+model ProductIngredient {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryId Int
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+  quantity    Float     @default(1)
+  unit        String    @default("unidad")
 
-model ProductRecipe {
-  id            Int         @id @default(autoincrement())
-  productId     Int
-  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  rawMaterialId Int
-  rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id])
-  quantity      Float       @default(1)
-
-  @@unique([productId, rawMaterialId])
+  @@unique([productId, inventoryId])
 }
 
 model Protocol {

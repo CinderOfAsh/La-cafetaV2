@@ -10,9 +10,11 @@ export async function GET(
   const product = await prisma.product.findUnique({
     where: { id: parseInt(id) },
     include: {
-      inventory: { select: { stock: true, minStock: true, unit: true } },
-      recipes: {
-        include: { rawMaterial: true },
+      inventory: { select: { id: true, stock: true, minStock: true, unit: true } },
+      ingredients: {
+        include: {
+          inventory: { select: { id: true, name: true, stock: true, unit: true } },
+        },
       },
     },
   });
@@ -29,7 +31,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { name, price, tags, imageUrl, description, isActive, customFields } = await request.json();
+  const { name, price, tags, imageUrl, description, isActive, customFields, ingredients } = await request.json();
 
   const data: Record<string, unknown> = {};
   if (name !== undefined) data.name = name;
@@ -45,7 +47,33 @@ export async function PUT(
     data,
   });
 
-  return Response.json(product);
+  if (ingredients !== undefined && Array.isArray(ingredients)) {
+    await prisma.productIngredient.deleteMany({ where: { productId: parseInt(id) } });
+    for (const ing of ingredients) {
+      await prisma.productIngredient.create({
+        data: {
+          productId: parseInt(id),
+          inventoryId: ing.inventoryId,
+          quantity: ing.quantity ?? 1,
+          unit: ing.unit || "unidad",
+        },
+      });
+    }
+  }
+
+  const fullProduct = await prisma.product.findUnique({
+    where: { id: parseInt(id) },
+    include: {
+      inventory: { select: { id: true, stock: true, minStock: true, unit: true } },
+      ingredients: {
+        include: {
+          inventory: { select: { id: true, name: true, stock: true, unit: true } },
+        },
+      },
+    },
+  });
+
+  return Response.json(fullProduct);
 }
 
 export async function DELETE(
@@ -53,12 +81,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  // Delete related records first
   await prisma.saleItem.deleteMany({ where: { productId: parseInt(id) } });
   await prisma.protocol.deleteMany({ where: { productId: parseInt(id) } });
+  await prisma.productIngredient.deleteMany({ where: { productId: parseInt(id) } });
   await prisma.inventory.deleteMany({ where: { productId: parseInt(id) } });
-  await prisma.productRecipe.deleteMany({ where: { productId: parseInt(id) } });
-  // Then delete the product
   await prisma.product.delete({
     where: { id: parseInt(id) },
   });
