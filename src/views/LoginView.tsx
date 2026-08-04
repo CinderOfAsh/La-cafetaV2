@@ -29,7 +29,7 @@ export function LoginView() {
     try {
       const r = await apiGet<{ ok: true; user: AuthUser }>('/api/auth/login-employee')
       setUser(r.user)
-      toast.success(`Bienvenido, ${r.user.name}`)
+      toast.success('Sesión iniciada')
     } catch {
       toast.error('No se pudo iniciar sesión como empleado')
     } finally {

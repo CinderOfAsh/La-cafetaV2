@@ -31,16 +31,15 @@ const cards: { id: string; title: string; description: string; icon: typeof Shop
 
 export function HubEmpleadoView() {
   const setView = useAppStore((s) => s.setView)
-  const user = useAppStore((s) => s.user)
 
   return (
     <>
       <AppHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
-          eyebrow="Bienvenido"
-          title={`Hola${user ? `, ${user.name.split(' ')[0]}` : ''}`}
-          description="Selecciona una opción para empezar tu jornada."
+          eyebrow="Cantina"
+          title="Panel de empleado"
+          description="Selecciona una opción para empezar."
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 max-w-5xl">

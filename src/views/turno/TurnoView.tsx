@@ -19,7 +19,7 @@ const STORAGE_KEY_PREFIX = 'lacafeta:turno:'
 export function TurnoView() {
   const setView = useAppStore((s) => s.setView)
   const user = useAppStore((s) => s.user)!
-  const [today, setToday] = useState<ShiftAssignment | null>(null)
+  const [todayAssignments, setTodayAssignments] = useState<ShiftAssignment[]>([])
   const [shift, setShift] = useState<Shift | null>(null)
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [loading, setLoading] = useState(true)
@@ -29,18 +29,48 @@ export function TurnoView() {
   const [shiftRanking, setShiftRanking] = useState<ShiftSalesRanking[]>([])
   const [loadingSales, setLoadingSales] = useState(false)
   const date = todayStr()
-  const storageKey = `${STORAGE_KEY_PREFIX}${user.id}:${date}`
+  // Use a generic storage key (not per-user) since the panel is impersonal
+  const storageKey = `${STORAGE_KEY_PREFIX}shift:${date}`
 
   useEffect(() => {
     ;(async () => {
       try {
+        // Load ALL assignments for today (impersonal — we'll determine the active shift by time)
         const assignments = await get<ShiftAssignment[]>(
-          `/api/shift-assignments?userId=${user.id}&date=${date}`
+          `/api/shift-assignments?date=${date}`
         )
-        if (assignments.length > 0) {
-          setToday(assignments[0])
-          setShift(assignments[0].shift || null)
+        setTodayAssignments(assignments)
+        // Determine the active shift based on current time
+        const now = new Date()
+        const nowMinutes = now.getHours() * 60 + now.getMinutes()
+        // Group assignments by shiftId to find which shift is active now
+        const shiftMap = new Map<string, { shift: any; assignments: ShiftAssignment[] }>()
+        for (const a of assignments) {
+          const key = a.shiftId
+          if (!shiftMap.has(key)) {
+            shiftMap.set(key, { shift: a.shift, assignments: [] })
+          }
+          shiftMap.get(key)!.assignments.push(a)
         }
+        // Find the shift whose time range includes now
+        let activeShift: any = null
+        for (const [, val] of shiftMap) {
+          const s = val.shift
+          if (!s) continue
+          const [sh, sm] = s.startTime.split(':').map(Number)
+          const [eh, em] = s.endTime.split(':').map(Number)
+          const startMin = sh * 60 + sm
+          const endMin = eh * 60 + em
+          if (nowMinutes >= startMin && nowMinutes <= endMin) {
+            activeShift = s
+            break
+          }
+        }
+        // If no active shift by time, pick the first one of the day (or null)
+        if (!activeShift && assignments.length > 0) {
+          activeShift = assignments[0].shift
+        }
+        setShift(activeShift)
         const prots = await get<Protocol[]>('/api/protocols')
         setProtocols(prots)
       } catch {
@@ -49,7 +79,7 @@ export function TurnoView() {
         setLoading(false)
       }
     })()
-  }, [user.id, date])
+  }, [date])
 
   // Restore stage from localStorage
   useEffect(() => {
@@ -125,21 +155,22 @@ export function TurnoView() {
     } catch {
       // non-blocking
     }
-    // Load today's sales by this employee AND the ranking (all employees on this shift today)
+    // Load today's sales for the active shift AND the ranking (all employees on this shift today)
     setLoadingSales(true)
     try {
-      const sales = await get<SaleTransaction[]>(`/api/sales?employeeId=${user.id}&date=${date}`)
-      setShiftSales(sales)
-      // Load ranking: fetch all sales today and all assignments today to compute per-employee sales
+      // Load all sales today and all assignments today
       const [allSales, allAssignments] = await Promise.all([
         get<SaleTransaction[]>(`/api/sales?date=${date}`),
         get<ShiftAssignment[]>(`/api/shift-assignments?date=${date}`),
       ])
-      // For each assignment on this shift today, count sales attributed to that user
-      // Sales are attributed to employeeId; both people on the shift get credited equally
-      const shiftAssignments = allAssignments.filter((a) => a.shiftId === today?.shiftId)
+      // Filter assignments and sales for the active shift
+      const shiftAssignments = allAssignments.filter((a) => a.shiftId === shift?.id)
+      // Sales for this shift = sales by any of the employees on this shift today
+      const shiftEmployeeIds = new Set(shiftAssignments.map((a) => a.userId))
+      const sales = allSales.filter((s) => s.employeeId && shiftEmployeeIds.has(s.employeeId))
+      setShiftSales(sales)
+      // Ranking: each person on the shift with their sales
       const ranking = shiftAssignments.map((a) => {
-        // Count this user's sales today
         const userSales = allSales.filter((s) => s.employeeId === a.userId)
         return {
           userId: a.userId,
@@ -194,6 +225,18 @@ export function TurnoView() {
     return { totalVentas, ingresos, efectivo, tarjeta, itemsVendidos, topProducts }
   }, [shiftSales])
 
+  // People assigned to the active shift today
+  const shiftPeople = useMemo(() => {
+    if (!shift) return []
+    return todayAssignments.filter((a) => a.shiftId === shift.id)
+  }, [todayAssignments, shift])
+
+  // Welcome names: the 2 people on the shift, or "Admin" if nobody
+  const welcomeNames = useMemo(() => {
+    if (shiftPeople.length === 0) return 'Admin'
+    return shiftPeople.map((a) => a.user?.name || '—').join(' y ')
+  }, [shiftPeople])
+
   return (
     <>
       <AppHeader title="Mi Turno" onBack={() => setView('hub-empleado')} />
@@ -208,14 +251,18 @@ export function TurnoView() {
                   {showFinalizado ? 'Turno finalizado' : effectiveStage === 'ventas' ? 'Turno en curso' : 'Turno pendiente de apertura'}
                 </p>
                 <h2 className="font-serif text-2xl text-foreground">
-                  Bienvenido, {user.name.split(' ')[0]}
+                  Bienvenido, {welcomeNames}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-0.5">
                   {shift.name} · {shift.startTime}–{shift.endTime}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="sage">{today?.role}</Badge>
+              <div className="flex items-center gap-2 flex-wrap">
+                {shiftPeople.map((a) => (
+                  <Badge key={a.id} variant={a.role === 'COCINERO' ? 'sage' : 'muted'}>
+                    {a.user?.name} · {a.role}
+                  </Badge>
+                ))}
                 {effectiveStage === 'ventas' && (
                   <button
                     className="btn-outline text-sm"
@@ -301,7 +348,7 @@ export function TurnoView() {
           <ShiftSummaryModal
             summary={salesSummary}
             ranking={shiftRanking}
-            currentUserId={user.id}
+            currentUserId={shiftPeople[0]?.userId || user.id}
             loading={loadingSales}
             shiftName={shift?.name || ''}
             onContinue={() => persistStage('finalizado')}
@@ -310,7 +357,7 @@ export function TurnoView() {
         ) : (
           <>
             {/* POS panel */}
-            <LivePizarra employeeId={user.id} />
+            <LivePizarra employeeId={shiftPeople[0]?.userId || user.id} />
             {/* sr-only summary to keep protocols import meaningful */}
             <span className="sr-only">{protocols.length} protocolos cargados</span>
           </>

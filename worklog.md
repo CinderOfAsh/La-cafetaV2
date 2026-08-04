@@ -579,3 +579,43 @@ Stage Summary:
 - Ranking de ventas en el resumen de cierre de turno
 - Botón Finalizar turno siempre disponible en stage ventas
 - Turnos sin protocolos funcionan correctamente (skip al resumen)
+
+---
+Task ID: 12
+Agent: Super Z (main)
+Task: Panel de empleado impersonal + bienvenida con personas del turno
+
+Work Log:
+- HubEmpleado: cambiado "Hola, [nombre]" → "Panel de empleado" (impersonal)
+- LoginView: toast de bienvenida de empleado cambiado de "Bienvenido, [nombre]" → "Sesión iniciada"
+- TurnoView reescrito para ser impersonal:
+  - Carga TODAS las asignaciones de hoy (no filtra por usuario autenticado)
+  - Determina el turno activo por la hora actual (qué turno incluye now)
+  - Si no hay turno activo por hora, usa el primero del día
+  - Bienvenida: "Bienvenido, [persona1] y [persona2]" (nombres de las 2 personas del turno)
+  - Si no hay nadie asignado: "Bienvenido, Admin"
+  - Badges con nombre + rol de cada persona en el turno
+  - LivePizarra usa el primer empleado del turno como employeeId
+  - ShiftSummaryModal usa el primer empleado del turno como currentUserId
+  - localStorage key genérico (no por usuario): 'lacafeta:turno:shift:[date]'
+  - Carga ventas de TODOS los empleados del turno (no solo del autenticado)
+- DashboardEmpleado reescrito para ser impersonal:
+  - Selector de empleado (dropdown) en lugar de usar el usuario autenticado
+  - Usa /api/dashboard/employee-stats?userId=... en lugar de /api/dashboard/my-stats
+  - Muestra: header del empleado, KPIs (facturación, transacciones, efectivo, tarjeta), historial de turnos, intercambios (solicitados/recibidos/aprobados)
+  - Ya no usa MyStats ni hourlySales (removidos)
+- Calendario sigue siendo personal (pide identificación con dropdown) — sin cambios
+- Verificación Agent Browser:
+  - Hub: "Panel de empleado" (sin nombre) ✓
+  - Toast login: "Sesión iniciada" ✓
+  - Mi Turno: "Bienvenido, Angel y Angel" (las 2 personas del turno de Mañana) ✓
+  - Badges: "Angel · CAMARERO" y "Angel · COCINERO" ✓
+  - Dashboard: selector de empleado, stats de Aitana (6 turnos, 4 camarero, 2 cocinero) ✓
+  - Calendario: sigue pidiendo identificación ✓
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Hub de empleado impersonal
+- Turno da bienvenida a las 2 personas del turno (o Admin si no hay nadie)
+- Dashboard de empleado con selector (impersonal)
+- Calendario sigue siendo personal (identificación requerida)
