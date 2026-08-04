@@ -1,0 +1,434 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-crimson);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-sage: var(--sage);
+  --color-sage-light: var(--sage-light);
+  --color-sage-foreground: var(--sage-foreground);
+  --color-warm: var(--warm);
+  --color-warn: var(--warn);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  /* Paleta Wellness / ClearPath */
+  --sage: #7FA69B;
+  --sage-light: rgba(127, 166, 155, 0.08);
+  --sage-foreground: #FFFFFF;
+  --warm: #F5F1EA;
+  --warn: #C77B5C;
+  --radius: 1rem;
+
+  --background: #FAFAF7;
+  --foreground: #2E3231;
+  --card: #FFFFFF;
+  --card-foreground: #2E3231;
+  --popover: #FFFFFF;
+  --popover-foreground: #2E3231;
+  --primary: #7FA69B;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F5F1EA;
+  --secondary-foreground: #2E3231;
+  --muted: #F5F1EA;
+  --muted-foreground: #535956;
+  --accent: rgba(127, 166, 155, 0.12);
+  --accent-foreground: #2E3231;
+  --destructive: #C77B5C;
+  --border: rgba(46, 50, 49, 0.08);
+  --input: rgba(46, 50, 49, 0.06);
+  --ring: #7FA69B;
+  --chart-1: #7FA69B;
+  --chart-2: #B8A48C;
+  --chart-3: #C77B5C;
+  --chart-4: #6B8E7F;
+  --chart-5: #9DA8A3;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #2E3231;
+  --sidebar-primary: #7FA69B;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(127, 166, 155, 0.08);
+  --sidebar-accent-foreground: #2E3231;
+  --sidebar-border: rgba(46, 50, 49, 0.08);
+  --sidebar-ring: #7FA69B;
+}
+
+.dark {
+  --sage: #8FB9AD;
+  --sage-light: rgba(143, 185, 173, 0.12);
+  --sage-foreground: #1A1D1C;
+  --warm: #2A2E2D;
+  --warn: #D89172;
+
+  --background: #1A1D1C;
+  --foreground: #E8EAE8;
+  --card: #232726;
+  --card-foreground: #E8EAE8;
+  --popover: #232726;
+  --popover-foreground: #E8EAE8;
+  --primary: #8FB9AD;
+  --primary-foreground: #1A1D1C;
+  --secondary: #2A2E2D;
+  --secondary-foreground: #E8EAE8;
+  --muted: #2A2E2D;
+  --muted-foreground: #949E9B;
+  --accent: rgba(143, 185, 173, 0.15);
+  --accent-foreground: #E8EAE8;
+  --destructive: #D89172;
+  --border: rgba(232, 234, 232, 0.08);
+  --input: rgba(232, 234, 232, 0.10);
+  --ring: #8FB9AD;
+  --chart-1: #8FB9AD;
+  --chart-2: #B8A48C;
+  --chart-3: #D89172;
+  --chart-4: #7BA08F;
+  --chart-5: #A8B3AE;
+  --sidebar: #232726;
+  --sidebar-foreground: #E8EAE8;
+  --sidebar-primary: #8FB9AD;
+  --sidebar-primary-foreground: #1A1D1C;
+  --sidebar-accent: rgba(143, 185, 173, 0.12);
+  --sidebar-accent-foreground: #E8EAE8;
+  --sidebar-border: rgba(232, 234, 232, 0.08);
+  --sidebar-ring: #8FB9AD;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    color: var(--foreground);
+  }
+  .font-serif {
+    font-family: var(--font-crimson), Georgia, serif;
+    font-weight: 400;
+  }
+}
+
+/* ==================== Wellness design system ==================== */
+
+/* Cards */
+.card-wellness {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(46, 50, 49, 0.04), 0 1px 2px rgba(46, 50, 49, 0.02);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-wellness:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(46, 50, 49, 0.08), 0 2px 6px rgba(46, 50, 49, 0.04);
+}
+
+/* Botones primarios — pill sage */
+.btn-sage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: var(--sage);
+  color: var(--sage-foreground);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+.btn-sage:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sage) 88%, black);
+  transform: translateY(-1px);
+}
+.btn-sage:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-outline:hover {
+  background: var(--accent);
+  border-color: var(--sage);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--foreground);
+  border: none;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.btn-ghost:hover {
+  background: var(--accent);
+}
+
+/* Inputs */
+.input-wellness {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background: var(--background);
+  border: 1px solid var(--input);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--foreground);
+  outline: none;
+  transition: all 0.2s ease;
+}
+.input-wellness::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+.input-wellness:focus {
+  border-color: var(--sage);
+  box-shadow: 0 0 0 3px var(--sage-light);
+}
+
+/* Tabs tipo bookmark */
+.bookmark-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+  padding-left: 0.5rem;
+}
+.bookmark-tab {
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  position: relative;
+  top: 1px;
+  transition: all 0.2s ease;
+}
+.bookmark-tab:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+.bookmark-tab.active {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--sage);
+  font-weight: 600;
+}
+
+/* Animaciones reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Decorative elements positioning */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+}
+.deco-blob {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+/* Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--sage);
+}
+
+/* Cursor follower */
+.cursor-follower {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background: var(--sage);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: multiply;
+  transition: transform 0.15s ease;
+  opacity: 0;
+}
+
+/* Section heading with serif accent */
+.section-title {
+  font-family: var(--font-crimson), Georgia, serif;
+  font-weight: 400;
+  font-size: 1.75rem;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+/* Drag handle */
+.drag-handle {
+  cursor: grab;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Stock badges */
+.stock-ok {
+  background: rgba(127, 166, 155, 0.15);
+  color: var(--sage);
+}
+.stock-critical {
+  background: rgba(199, 123, 92, 0.15);
+  color: var(--warn);
+}
+
+/* Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.5s ease forwards;
+  opacity: 0;
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease forwards;
+}
+.animate-scale-in {
+  animation: scaleIn 0.25s ease forwards;
+}
+
+/* Priority pulse */
+@keyframes sagePulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--sage-light); }
+  50% { box-shadow: 0 0 0 6px var(--sage-light); }
+}
+.priority-pulse {
+  animation: sagePulse 2s ease-in-out infinite;
+}
+
+/* Sage gradient */
+.bg-sage-gradient {
+  background: radial-gradient(ellipse at top, var(--sage-light), transparent 70%),
+              linear-gradient(180deg, var(--warm), var(--background));
+}
+
+/* Cards hover shadow override */
+.hover-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(46, 50, 49, 0.10);
+}
+
+/* Focus visible ring helper */
+.ring-sage:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--sage-light);
+}

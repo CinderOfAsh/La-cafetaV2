@@ -1,0 +1,180 @@
+// La Cafeta — Schema completo
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  password     String   @default("")
+  role         String   @default("EMPLOYEE") // ADMIN | EMPLOYEE | COCINERO | ANOTADOR
+  isActive     Boolean  @default(true)
+  customFields String   @default("{}") // JSON string
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedShifts    ShiftAssignment[]
+  saleTransactions  SaleTransaction[]
+  originalSwaps     ShiftSwap[]       @relation("OriginalUser")
+  replacementSwaps  ShiftSwap[]       @relation("ReplacementUser")
+  shiftDebts        ShiftDebt[]
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  price        Float
+  tags         String   @default("[]") // JSON string array
+  imageUrl     String?
+  description  String?
+  isActive     Boolean  @default(true)
+  customFields String   @default("{}") // JSON string
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  protocol   Protocol?
+  inventory  Inventory?
+  saleItems  SaleItem[]
+  recipes    ProductRecipe[]
+}
+
+model Inventory {
+  id           String  @id @default(cuid())
+  productId    String  @unique
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stock        Float   @default(0)
+  minStock     Float   @default(0)
+  unit         String  @default("ud")
+  customFields String  @default("{}")
+}
+
+model Shift {
+  id              String   @id @default(cuid())
+  name            String
+  startTime       String   // "HH:mm"
+  endTime         String   // "HH:mm"
+  daysOfWeek      String   @default("0,1,2,3,4,5,6") // CSV 0..6
+  openingProtocol String   @default("[]") // JSON string array de pasos
+  closingProtocol String   @default("[]") // JSON string array de pasos
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assignments ShiftAssignment[]
+}
+
+model ShiftAssignment {
+  id        String   @id @default(cuid())
+  shiftId   String
+  userId    String
+  date      String   // "YYYY-MM-DD"
+  role      String   @default("ANOTADOR") // ANOTADOR | COCINERO
+  createdAt DateTime @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  swaps ShiftSwap[]
+
+  @@unique([shiftId, date, userId])
+}
+
+model ShiftSwap {
+  id                  String   @id @default(cuid())
+  originalUserId      String
+  replacementUserId   String
+  shiftAssignmentId   String
+  type                String   @default("swap") // swap | substitute
+  createdAt           DateTime @default(now())
+
+  originalUser     User            @relation("OriginalUser", fields: [originalUserId], references: [id])
+  replacementUser  User            @relation("ReplacementUser", fields: [replacementUserId], references: [id])
+  shiftAssignment  ShiftAssignment @relation(fields: [shiftAssignmentId], references: [id], onDelete: Cascade)
+}
+
+model ShiftDebt {
+  id        String   @id @default(cuid())
+  userId    String
+  reason    String
+  isPaid    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SaleTransaction {
+  id            String   @id @default(cuid())
+  turnoId       Int      @default(1)
+  employeeId    String?
+  total         Float    @default(0)
+  paymentMethod String   @default("cash") // cash | card
+  createdAt     DateTime @default(now())
+
+  employee User?      @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  items    SaleItem[]
+}
+
+model SaleItem {
+  id          String   @id @default(cuid())
+  saleId      String
+  productId   String?
+  productName String
+  price       Float
+  quantity    Int      @default(1)
+  priority    Int      @default(0)
+  status      String   @default("PENDING") // PENDING | DELIVERED
+  createdAt   DateTime @default(now())
+
+  sale    SaleTransaction @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model RawMaterial {
+  id       String           @id @default(cuid())
+  name     String
+  unit     String           @default("ud")
+  stock    Float            @default(0)
+  minStock Float            @default(0)
+  recipes  ProductRecipe[]
+}
+
+model ProductRecipe {
+  id            String  @id @default(cuid())
+  productId     String
+  rawMaterialId String
+  quantity      Float   @default(1)
+
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, rawMaterialId])
+}
+
+model Protocol {
+  id          String   @id @default(cuid())
+  type        String   // APERTURA | CIERRE | COCINA | PRODUCTO
+  name        String
+  description String?
+  steps       String   @default("[]") // JSON string array
+  productId   String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product     Product?            @relation(fields: [productId], references: [id], onDelete: SetNull)
+  completions ProtocolCompletion[]
+}
+
+model ProtocolCompletion {
+  id          String   @id @default(cuid())
+  protocolId  String
+  date        String   // "YYYY-MM-DD"
+  completedBy String?
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  protocol Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+}
