@@ -285,3 +285,56 @@ Stage Summary:
 - 54 productos con precios reales
 - Flujo de protocolos con checkboxes bloqueantes implementado y verificado end-to-end
 - App lista para tests del usuario
+
+---
+Task ID: 6
+Agent: Super Z (main)
+Task: Refactor materias primas→productos→compras, eliminar deudas, nueva plantilla y turnos
+
+Work Log:
+- Prisma schema refactor:
+  - Eliminado modelo `ShiftDebt` (deudas) y `Inventory` (stock vive en RawMaterial)
+  - Añadido `Purchase` + `PurchaseItem` para lista de la compra
+  - `Product` ya no tiene `inventory`, solo `recipes` (ProductRecipe[])
+  - `RawMaterial` mantiene stock/minStock/unit
+- BD reseteada y schema pushed
+- Types actualizados: eliminado ShiftDebt/Inventory, añadido RawMaterial, ProductRecipe, Purchase, PurchaseItem, DashboardStats con totalPurchases/purchasesCount/recentPurchases
+- APIs:
+  - Eliminadas: /api/shift-debts, /api/shift-debts/[id]/pay, /api/inventory, /api/inventory/[id]
+  - Actualizadas: /api/products (GET/POST con recipes embebidas + rawMaterial incluido), /api/products/[id] (PUT con full-replace de recipes), /api/sales (POST decrementa RawMaterial.stock basado en receta del producto), /api/dashboard/stats (eliminada pendingDebts, añadido totalPurchases/purchasesCount/recentPurchases, criticalStock ahora desde RawMaterial)
+  - Nuevas: /api/raw-materials (GET/POST), /api/raw-materials/[id] (PUT/DELETE con validación de uso en recetas), /api/purchases (GET con date range, POST con transacción que incrementa stock), /api/purchases/[id] (GET/DELETE que revierte stock)
+- ProductosView reescrito con 3 tabs:
+  - Productos: tabla con columna "Composición" mostrando receta, modal con editor de receta embebido (select de materia + cantidad + unidad, add/remove rows)
+  - Materias Primas: CRUD completo, badges de stock crítico/OK
+  - Lista de la Compra: registro de compras con múltiples items, fecha, proveedor, calcula total automáticamente, incrementa stock al guardar
+- PersonalView: eliminada pestaña Deudas, DebtDialog y botón "Añadir deuda". Solo 2 tabs: Empleados, Turnos
+- DashboardView: reemplazada sección "Deudas pendientes" por "Compras de suministros" (muestra total, count y últimas 10 compras)
+- AsignarTurnosView: roles cambiados de ANOTADOR→CAMARERO (manteniendo COCINERO)
+- API /api/shift-assignments: default role cambiado a CAMARERO
+- Seed scripts/seed-clean.ts: 
+  - Admin: Bullerre (bullerre@lacafeta.com)
+  - 16 empleados: Aitana, Angel, Adrian, Bakr, Claudia, Diego S, Diego V, Elías, Hugo A, Jose G, Javier G, Javier D, Kawtar, Sofía, Luca, Vittorio
+  - 2 turnos: Mañana (08:45-13:00, L-V), Tarde (13:00-17:00, L-V) con protocolos apertura/cierre
+  - 2 protocolos generales (apertura, cierre)
+  - 0 asignaciones de turno (para test UX)
+  - 0 productos/materias primas (para test UX)
+- Verificación Agent Browser:
+  - Login como Bullerre ✓
+  - Crear 6 materias primas (Barra de pan, Lomo, Queso, Plato, Patatas fritas, Servilleta) ✓
+  - Crear producto "Bocadillo de lomo y queso" €4 con receta: ½ pan + 2 lomos + 3 lonchas queso + 1 plato + 100g patatas + 1 servilleta ✓
+  - Venta de 1 bocadillo → stock decrementado correctamente: pan 20→19.5, lomo 50→48, queso 40→37, plato 30→29, patatas 2000→1900, servilleta 100→99 ✓
+  - Registrar compra de 10 barras de pan × €0.80 = €8 → stock incrementado 19.5→29.5 ✓
+  - Compra visible en lista con detalle ✓
+  - PersonalView sin pestaña Deudas ✓
+  - Dashboard con sección "Compras de suministros" en lugar de "Deudas" ✓
+  - 2 turnos correctos (08:45-13, 13-17, L-V) ✓
+  - 0 asignaciones de turno (listo para test UX) ✓
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Refactor materias primas→recetas→ventas→stock completo y funcional
+- Lista de la compra con tracking de gastos operativa
+- Deudas eliminadas por completo (se retomarán más adelante)
+- Plantilla real (Bullerre + 16 empleados) cargada
+- Turnos reales (8:45-13, 13-17, L-V) sin asignaciones para test UX
+- BD limpia de productos para que el usuario testee el alta uno a uno

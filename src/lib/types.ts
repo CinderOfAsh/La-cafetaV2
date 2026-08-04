@@ -1,6 +1,6 @@
 // Tipos compartidos entre cliente y servidor
 
-export type Role = 'ADMIN' | 'EMPLOYEE' | 'COCINERO' | 'ANOTADOR'
+export type Role = 'ADMIN' | 'EMPLOYEE' | 'COCINERO' | 'CAMARERO'
 
 export type ProtocolType = 'APERTURA' | 'CIERRE' | 'COCINA' | 'PRODUCTO'
 
@@ -26,27 +26,44 @@ export interface Product {
   description?: string | null
   isActive: boolean
   customFields: Record<string, string>
-  inventory?: Inventory | null
   protocol?: Protocol | null
+  recipes?: ProductRecipe[]
 }
 
-export interface Inventory {
+export interface RawMaterial {
   id: string
-  productId: string
+  name: string
+  unit: string
   stock: number
   minStock: number
-  unit: string
-  customFields: Record<string, string>
-  product?: {
-    id: string
-    name: string
-    price: number
-    tags: string[] | string
-    imageUrl?: string | null
-    description?: string | null
-    isActive: boolean
-    customFields: Record<string, string> | string
-  } | null
+  critical?: boolean
+}
+
+export interface ProductRecipe {
+  id: string
+  productId: string
+  rawMaterialId: string
+  quantity: number
+  rawMaterial?: RawMaterial
+}
+
+export interface Purchase {
+  id: string
+  date: string
+  supplier?: string | null
+  notes?: string | null
+  totalAmount: number
+  items?: PurchaseItem[]
+}
+
+export interface PurchaseItem {
+  id: string
+  purchaseId: string
+  rawMaterialId: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+  rawMaterial?: RawMaterial
 }
 
 export interface Shift {
@@ -76,15 +93,6 @@ export interface ShiftSwap {
   shiftAssignmentId: string
   type: SwapType
   createdAt: string
-}
-
-export interface ShiftDebt {
-  id: string
-  userId: string
-  reason: string
-  isPaid: boolean
-  createdAt: string
-  user?: { id: string; name: string; email: string }
 }
 
 export interface SaleTransaction {
@@ -130,7 +138,10 @@ export interface DashboardStats {
   paymentMethods: { cash: number; card: number; cashPct: number; cardPct: number }
   topProducts: { id: string; name: string; quantity: number; revenue: number }[]
   swaps: ShiftSwap[]
-  pendingDebts: ShiftDebt[]
+  // Gastos en suministros (compras) en el periodo
+  totalPurchases: number
+  purchasesCount: number
+  recentPurchases: { id: string; date: string; supplier?: string | null; totalAmount: number; itemCount: number }[]
 }
 
 export interface MyStats {

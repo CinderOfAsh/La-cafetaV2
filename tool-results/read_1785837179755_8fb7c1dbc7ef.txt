@@ -1,0 +1,756 @@
+     1→'use client'
+     2→
+     3→import { useEffect, useMemo, useState } from 'react'
+     4→import {
+     5→  Plus,
+     6→  Search,
+     7→  Pencil,
+     8→  Trash2,
+     9→  Download,
+    10→  Users,
+    11→  Clock,
+    12→  Coins,
+    13→  CheckCircle2,
+    14→  XCircle,
+    15→  CalendarDays,
+    16→  Save,
+    17→} from 'lucide-react'
+    18→import { AppHeader } from '@/components/AppHeader'
+    19→import { BookmarkTabs, Card, ModalShell, Toolbar, Badge, KVEditor } from '@/components/shared'
+    20→import { LoadingBlock, EmptyState } from '@/components/ui-bits'
+    21→import { useAppStore } from '@/lib/store'
+    22→import { get, post, put, del } from '@/lib/api'
+    23→import { toast } from 'sonner'
+    24→import { downloadCsv } from '@/lib/export-csv'
+    25→import { formatDate, DOW_LABELS, parseDays } from '@/lib/format'
+    26→import type { Shift, ShiftDebt, Role } from '@/lib/types'
+    27→
+    28→// DB user shape
+    29→interface DbUser {
+    30→  id: string
+    31→  name: string
+    32→  email: string
+    33→  role: Role
+    34→  isActive: boolean
+    35→  customFields: Record<string, string>
+    36→  createdAt: string
+    37→}
+    38→
+    39→export function PersonalView() {
+    40→  const setView = useAppStore((s) => s.setView)
+    41→  const [tab, setTab] = useState<'empleados' | 'turnos' | 'deudas'>('empleados')
+    42→
+    43→  return (
+    44→    <>
+    45→      <AppHeader title="Gestión de Personal" onBack={() => setView('hub-admin')} />
+    46→      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    47→        <BookmarkTabs
+    48→          active={tab}
+    49→          onChange={(id) => setTab(id as 'empleados' | 'turnos' | 'deudas')}
+    50→          tabs={[
+    51→            { id: 'empleados', label: 'Empleados' },
+    52→            { id: 'turnos', label: 'Turnos' },
+    53→            { id: 'deudas', label: 'Deudas' },
+    54→          ]}
+    55→        />
+    56→        {tab === 'empleados' && <EmpleadosTab />}
+    57→        {tab === 'turnos' && <TurnosTab />}
+    58→        {tab === 'deudas' && <DeudasTab />}
+    59→      </main>
+    60→    </>
+    61→  )
+    62→}
+    63→
+    64→// ---------- Empleados ----------
+    65→
+    66→function EmpleadosTab() {
+    67→  const setView = useAppStore((s) => s.setView)
+    68→  const setSelectedUserId = useAppStore((s) => s.setSelectedUserId)
+    69→  const [items, setItems] = useState<DbUser[]>([])
+    70→  const [loading, setLoading] = useState(true)
+    71→  const [search, setSearch] = useState('')
+    72→  const [editing, setEditing] = useState<DbUser | null>(null)
+    73→  const [creating, setCreating] = useState(false)
+    74→  const [debtFor, setDebtFor] = useState<DbUser | null>(null)
+    75→
+    76→  async function load() {
+    77→    setLoading(true)
+    78→    try {
+    79→      const data = await get<DbUser[]>('/api/users')
+    80→      setItems(data)
+    81→    } catch {
+    82→      toast.error('No se pudieron cargar los usuarios')
+    83→    } finally {
+    84→      setLoading(false)
+    85→    }
+    86→  }
+    87→  useEffect(() => {
+    88→    load()
+    89→  }, [])
+    90→
+    91→  const filtered = useMemo(() => {
+    92→    const q = search.trim().toLowerCase()
+    93→    if (!q) return items
+    94→    return items.filter((u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    95→  }, [items, search])
+    96→
+    97→  function exportCsv() {
+    98→    const rows = items.map((u) => ({
+    99→      id: u.id,
+   100→      nombre: u.name,
+   101→      email: u.email,
+   102→      rol: u.role,
+   103→      activo: u.isActive ? 'sí' : 'no',
+   104→      creado: formatDate(u.createdAt),
+   105→    }))
+   106→    downloadCsv(rows, 'empleados.csv')
+   107→    toast.success('CSV descargado')
+   108→  }
+   109→
+   110→  return (
+   111→    <div>
+   112→      <Toolbar>
+   113→        <div className="relative flex-1 min-w-[200px] max-w-md">
+   114→          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
+   115→          <input
+   116→            type="search"
+   117→            value={search}
+   118→            onChange={(e) => setSearch(e.target.value)}
+   119→            placeholder="Buscar empleado…"
+   120→            className="input-wellness pl-10"
+   121→          />
+   122→        </div>
+   123→        <button className="btn-outline text-sm" onClick={exportCsv}>
+   124→          <Download className="w-4 h-4" /> Exportar CSV
+   125→        </button>
+   126→        <button className="btn-sage text-sm" onClick={() => setCreating(true)}>
+   127→          <Plus className="w-4 h-4" /> Nuevo empleado
+   128→        </button>
+   129→      </Toolbar>
+   130→
+   131→      <Card className="p-0 overflow-hidden">
+   132→        {loading ? (
+   133→          <LoadingBlock label="Cargando empleados…" />
+   134→        ) : filtered.length === 0 ? (
+   135→          <EmptyState icon={<Users className="w-6 h-6" />} title="Sin empleados" description="No hay empleados que coincidan." />
+   136→        ) : (
+   137→          <div className="overflow-x-auto custom-scroll">
+   138→            <table className="w-full text-sm">
+   139→              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+   140→                <tr>
+   141→                  <th className="text-left font-medium px-4 py-3">Nombre</th>
+   142→                  <th className="text-left font-medium px-4 py-3">Email</th>
+   143→                  <th className="text-left font-medium px-4 py-3">Rol</th>
+   144→                  <th className="text-left font-medium px-4 py-3">Estado</th>
+   145→                  <th className="text-left font-medium px-4 py-3">Creado</th>
+   146→                  <th className="text-right font-medium px-4 py-3">Acciones</th>
+   147→                </tr>
+   148→              </thead>
+   149→              <tbody className="divide-y divide-border">
+   150→                {filtered.map((u) => (
+   151→                  <tr key={u.id} className="hover:bg-accent/40">
+   152→                    <td className="px-4 py-3 font-medium">{u.name}</td>
+   153→                    <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+   154→                    <td className="px-4 py-3">
+   155→                      <Badge variant={u.role === 'ADMIN' ? 'sage' : 'muted'}>{u.role}</Badge>
+   156→                    </td>
+   157→                    <td className="px-4 py-3">
+   158→                      {u.isActive ? (
+   159→                        <Badge variant="sage">Activo</Badge>
+   160→                      ) : (
+   161→                        <Badge variant="warn">Inactivo</Badge>
+   162→                      )}
+   163→                    </td>
+   164→                    <td className="px-4 py-3 text-muted-foreground">{formatDate(u.createdAt)}</td>
+   165→                    <td className="px-4 py-3 text-right">
+   166→                      <div className="inline-flex flex-wrap gap-1 justify-end">
+   167→                        <button
+   168→                          className="btn-ghost p-2 text-xs"
+   169→                          onClick={() => {
+   170→                            setSelectedUserId(u.id)
+   171→                            setView('admin-asignar')
+   172→                          }}
+   173→                          aria-label={`Asignar turnos a ${u.name}`}
+   174→                          title="Asignar turnos"
+   175→                        >
+   176→                          <CalendarDays className="w-4 h-4" />
+   177→                        </button>
+   178→                        <button
+   179→                          className="btn-ghost p-2 text-xs"
+   180→                          onClick={() => setDebtFor(u)}
+   181→                          aria-label={`Añadir deuda a ${u.name}`}
+   182→                          title="Añadir deuda"
+   183→                        >
+   184→                          <Coins className="w-4 h-4" />
+   185→                        </button>
+   186→                        <button
+   187→                          className="btn-ghost p-2"
+   188→                          onClick={() => setEditing(u)}
+   189→                          aria-label={`Editar ${u.name}`}
+   190→                        >
+   191→                          <Pencil className="w-4 h-4" />
+   192→                        </button>
+   193→                        <button
+   194→                          className="btn-ghost p-2 text-muted-foreground hover:text-[color:var(--warn)]"
+   195→                          onClick={async () => {
+   196→                            if (!confirm(`¿Eliminar a "${u.name}"?`)) return
+   197→                            try {
+   198→                              await del(`/api/users/${u.id}`)
+   199→                              toast.success('Usuario eliminado')
+   200→                              load()
+   201→                            } catch {
+   202→                              toast.error('No se pudo eliminar')
+   203→                            }
+   204→                          }}
+   205→                          aria-label={`Eliminar ${u.name}`}
+   206→                        >
+   207→                          <Trash2 className="w-4 h-4" />
+   208→                        </button>
+   209→                      </div>
+   210→                    </td>
+   211→                  </tr>
+   212→                ))}
+   213→              </tbody>
+   214→            </table>
+   215→          </div>
+   216→        )}
+   217→      </Card>
+   218→
+   219→      {(creating || editing) && (
+   220→        <UserDialog
+   221→          user={editing}
+   222→          onClose={() => {
+   223→            setCreating(false)
+   224→            setEditing(null)
+   225→          }}
+   226→          onSaved={() => {
+   227→            setCreating(false)
+   228→            setEditing(null)
+   229→            load()
+   230→          }}
+   231→        />
+   232→      )}
+   233→
+   234→      {debtFor && (
+   235→        <DebtDialog user={debtFor} onClose={() => setDebtFor(null)} onSaved={() => setDebtFor(null)} />
+   236→      )}
+   237→    </div>
+   238→  )
+   239→}
+   240→
+   241→function UserDialog({
+   242→  user,
+   243→  onClose,
+   244→  onSaved,
+   245→}: {
+   246→  user: DbUser | null
+   247→  onClose: () => void
+   248→  onSaved: () => void
+   249→}) {
+   250→  const isEdit = !!user
+   251→  const [name, setName] = useState(user?.name ?? '')
+   252→  const [email, setEmail] = useState(user?.email ?? '')
+   253→  const [password, setPassword] = useState('')
+   254→  const [role, setRole] = useState<Role>(user?.role ?? 'EMPLOYEE')
+   255→  const [isActive, setIsActive] = useState(user?.isActive ?? true)
+   256→  const [customFields, setCustomFields] = useState<Record<string, string>>(user?.customFields || {})
+   257→  const [saving, setSaving] = useState(false)
+   258→
+   259→  async function save() {
+   260→    if (!name.trim() || !email.trim()) {
+   261→      toast.error('Nombre y email son obligatorios')
+   262→      return
+   263→    }
+   264→    setSaving(true)
+   265→    try {
+   266→      const body: Record<string, unknown> = {
+   267→        name: name.trim(),
+   268→        email: email.trim(),
+   269→        role,
+   270→        isActive,
+   271→        customFields,
+   272→      }
+   273→      if (password) body.password = password
+   274→      if (isEdit && user) {
+   275→        await put(`/api/users/${user.id}`, body)
+   276→        toast.success('Usuario actualizado')
+   277→      } else {
+   278→        if (!password) {
+   279→          toast.error('La contraseña es obligatoria al crear')
+   280→          setSaving(false)
+   281→          return
+   282→        }
+   283→        await post('/api/users', body)
+   284→        toast.success('Usuario creado')
+   285→      }
+   286→      onSaved()
+   287→    } catch {
+   288→      toast.error('No se pudo guardar')
+   289→    } finally {
+   290→      setSaving(false)
+   291→    }
+   292→  }
+   293→
+   294→  return (
+   295→    <ModalShell
+   296→      open
+   297→      onClose={onClose}
+   298→      title={isEdit ? 'Editar empleado' : 'Nuevo empleado'}
+   299→      size="lg"
+   300→      footer={
+   301→        <>
+   302→          <button className="btn-ghost text-sm" onClick={onClose}>
+   303→            Cancelar
+   304→          </button>
+   305→          <button className="btn-sage text-sm" onClick={save} disabled={saving}>
+   306→            <Save className="w-4 h-4" /> {saving ? 'Guardando…' : 'Guardar'}
+   307→          </button>
+   308→        </>
+   309→      }
+   310→    >
+   311→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   312→        <div>
+   313→          <label className="text-sm font-medium block mb-1.5">Nombre *</label>
+   314→          <input className="input-wellness" value={name} onChange={(e) => setName(e.target.value)} />
+   315→        </div>
+   316→        <div>
+   317→          <label className="text-sm font-medium block mb-1.5">Email *</label>
+   318→          <input className="input-wellness" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+   319→        </div>
+   320→        <div>
+   321→          <label className="text-sm font-medium block mb-1.5">Contraseña {isEdit && '(dejar vacío para mantener)'}</label>
+   322→          <input
+   323→            className="input-wellness"
+   324→            type="password"
+   325→            value={password}
+   326→            onChange={(e) => setPassword(e.target.value)}
+   327→            placeholder={isEdit ? '••••••' : 'Contraseña inicial'}
+   328→          />
+   329→        </div>
+   330→        <div>
+   331→          <label className="text-sm font-medium block mb-1.5">Rol</label>
+   332→          <select className="input-wellness" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+   333→            <option value="ADMIN">ADMIN</option>
+   334→            <option value="EMPLOYEE">EMPLOYEE</option>
+   335→            <option value="COCINERO">COCINERO</option>
+   336→            <option value="ANOTADOR">ANOTADOR</option>
+   337→          </select>
+   338→        </div>
+   339→        <div className="sm:col-span-2">
+   340→          <label className="inline-flex items-center gap-2 cursor-pointer">
+   341→            <input
+   342→              type="checkbox"
+   343→              checked={isActive}
+   344→              onChange={(e) => setIsActive(e.target.checked)}
+   345→              className="w-4 h-4 accent-[color:var(--sage)]"
+   346→            />
+   347→            <span className="text-sm">Usuario activo</span>
+   348→          </label>
+   349→        </div>
+   350→        <div className="sm:col-span-2">
+   351→          <KVEditor value={customFields} onChange={setCustomFields} />
+   352→        </div>
+   353→      </div>
+   354→    </ModalShell>
+   355→  )
+   356→}
+   357→
+   358→function DebtDialog({
+   359→  user,
+   360→  onClose,
+   361→  onSaved,
+   362→}: {
+   363→  user: DbUser
+   364→  onClose: () => void
+   365→  onSaved: () => void
+   366→}) {
+   367→  const [reason, setReason] = useState('')
+   368→  const [saving, setSaving] = useState(false)
+   369→
+   370→  async function save() {
+   371→    if (!reason.trim()) {
+   372→      toast.error('Indica el motivo de la deuda')
+   373→      return
+   374→    }
+   375→    setSaving(true)
+   376→    try {
+   377→      await post('/api/shift-debts', { userId: user.id, reason: reason.trim() })
+   378→      toast.success('Deuda registrada')
+   379→      onSaved()
+   380→    } catch {
+   381→      toast.error('No se pudo registrar la deuda')
+   382→    } finally {
+   383→      setSaving(false)
+   384→    }
+   385→  }
+   386→
+   387→  return (
+   388→    <ModalShell
+   389→      open
+   390→      onClose={onClose}
+   391→      title={`Añadir deuda a ${user.name}`}
+   392→      size="sm"
+   393→      footer={
+   394→        <>
+   395→          <button className="btn-ghost text-sm" onClick={onClose}>Cancelar</button>
+   396→          <button className="btn-sage text-sm" onClick={save} disabled={saving}>
+   397→            {saving ? 'Guardando…' : 'Registrar'}
+   398→          </button>
+   399→        </>
+   400→      }
+   401→    >
+   402→      <label className="text-sm font-medium block mb-1.5">Motivo</label>
+   403→      <textarea
+   404→        className="input-wellness min-h-[80px] resize-y"
+   405→        value={reason}
+   406→        onChange={(e) => setReason(e.target.value)}
+   407→        placeholder="Ej: Caja cuadrada con -5€"
+   408→      />
+   409→    </ModalShell>
+   410→  )
+   411→}
+   412→
+   413→// ---------- Turnos ----------
+   414→
+   415→function TurnosTab() {
+   416→  const [items, setItems] = useState<Shift[]>([])
+   417→  const [loading, setLoading] = useState(true)
+   418→  const [editing, setEditing] = useState<Shift | null>(null)
+   419→  const [creating, setCreating] = useState(false)
+   420→
+   421→  async function load() {
+   422→    setLoading(true)
+   423→    try {
+   424→      const data = await get<Shift[]>('/api/shifts')
+   425→      setItems(data)
+   426→    } catch {
+   427→      toast.error('No se pudieron cargar los turnos')
+   428→    } finally {
+   429→      setLoading(false)
+   430→    }
+   431→  }
+   432→  useEffect(() => {
+   433→    load()
+   434→  }, [])
+   435→
+   436→  return (
+   437→    <div>
+   438→      <Toolbar>
+   439→        <div className="flex-1" />
+   440→        <button className="btn-sage text-sm" onClick={() => setCreating(true)}>
+   441→          <Plus className="w-4 h-4" /> Nuevo turno
+   442→        </button>
+   443→      </Toolbar>
+   444→
+   445→      {loading ? (
+   446→        <Card><LoadingBlock label="Cargando turnos…" /></Card>
+   447→      ) : items.length === 0 ? (
+   448→        <Card>
+   449→          <EmptyState icon={<Clock className="w-6 h-6" />} title="Sin turnos" description="Crea el primer turno." />
+   450→        </Card>
+   451→      ) : (
+   452→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   453→          {items.map((s) => {
+   454→            const days = parseDays(s.daysOfWeek)
+   455→            return (
+   456→              <Card key={s.id}>
+   457→                <div className="flex items-start justify-between mb-3">
+   458→                  <div>
+   459→                    <h3 className="font-semibold text-foreground">{s.name}</h3>
+   460→                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+   461→                      <Clock className="w-3.5 h-3.5" /> {s.startTime} – {s.endTime}
+   462→                    </p>
+   463→                  </div>
+   464→                  <div className="flex gap-1">
+   465→                    <button className="btn-ghost p-1.5" onClick={() => setEditing(s)} aria-label="Editar">
+   466→                      <Pencil className="w-3.5 h-3.5" />
+   467→                    </button>
+   468→                    <button
+   469→                      className="btn-ghost p-1.5 text-muted-foreground hover:text-[color:var(--warn)]"
+   470→                      onClick={async () => {
+   471→                        if (!confirm(`¿Eliminar turno "${s.name}"?`)) return
+   472→                        try {
+   473→                          await del(`/api/shifts/${s.id}`)
+   474→                          toast.success('Turno eliminado')
+   475→                          load()
+   476→                        } catch {
+   477→                          toast.error('No se pudo eliminar')
+   478→                        }
+   479→                      }}
+   480→                      aria-label="Eliminar"
+   481→                    >
+   482→                      <Trash2 className="w-3.5 h-3.5" />
+   483→                    </button>
+   484→                  </div>
+   485→                </div>
+   486→                <div className="flex gap-1 mb-3">
+   487→                  {DOW_LABELS.map((d, idx) => (
+   488→                    <span
+   489→                      key={idx}
+   490→                      className={`w-7 h-7 inline-flex items-center justify-center rounded-md text-xs font-medium ${
+   491→                        days.includes(idx) ? 'bg-[color:var(--sage)] text-[color:var(--sage-foreground)]' : 'bg-muted text-muted-foreground'
+   492→                      }`}
+   493→                    >
+   494→                      {d}
+   495→                    </span>
+   496→                  ))}
+   497→                </div>
+   498→                <div className="text-xs text-muted-foreground">
+   499→                  <span className="font-medium text-foreground">{(s.openingProtocol || []).length}</span> pasos apertura ·{' '}
+   500→                  <span className="font-medium text-foreground">{(s.closingProtocol || []).length}</span> pasos cierre
+   501→                </div>
+   502→              </Card>
+   503→            )
+   504→          })}
+   505→        </div>
+   506→      )}
+   507→
+   508→      {(creating || editing) && (
+   509→        <ShiftDialog
+   510→          shift={editing}
+   511→          onClose={() => {
+   512→            setCreating(false)
+   513→            setEditing(null)
+   514→          }}
+   515→          onSaved={() => {
+   516→            setCreating(false)
+   517→            setEditing(null)
+   518→            load()
+   519→          }}
+   520→        />
+   521→      )}
+   522→    </div>
+   523→  )
+   524→}
+   525→
+   526→function ShiftDialog({
+   527→  shift,
+   528→  onClose,
+   529→  onSaved,
+   530→}: {
+   531→  shift: Shift | null
+   532→  onClose: () => void
+   533→  onSaved: () => void
+   534→}) {
+   535→  const isEdit = !!shift
+   536→  const [name, setName] = useState(shift?.name ?? '')
+   537→  const [startTime, setStartTime] = useState(shift?.startTime ?? '07:00')
+   538→  const [endTime, setEndTime] = useState(shift?.endTime ?? '14:00')
+   539→  const [days, setDays] = useState<number[]>(parseDays(shift?.daysOfWeek).length ? parseDays(shift?.daysOfWeek) : [1, 2, 3, 4, 5])
+   540→  const [openingProtocol, setOpeningProtocol] = useState((shift?.openingProtocol || []).join('\n'))
+   541→  const [closingProtocol, setClosingProtocol] = useState((shift?.closingProtocol || []).join('\n'))
+   542→  const [saving, setSaving] = useState(false)
+   543→
+   544→  function toggleDay(d: number) {
+   545→    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()))
+   546→  }
+   547→
+   548→  async function save() {
+   549→    if (!name.trim()) {
+   550→      toast.error('El nombre es obligatorio')
+   551→      return
+   552→    }
+   553→    setSaving(true)
+   554→    try {
+   555→      const body = {
+   556→        name: name.trim(),
+   557→        startTime,
+   558→        endTime,
+   559→        daysOfWeek: days.join(','),
+   560→        openingProtocol: openingProtocol.split('\n').map((s) => s.trim()).filter(Boolean),
+   561→        closingProtocol: closingProtocol.split('\n').map((s) => s.trim()).filter(Boolean),
+   562→      }
+   563→      if (isEdit && shift) {
+   564→        await put(`/api/shifts/${shift.id}`, body)
+   565→        toast.success('Turno actualizado')
+   566→      } else {
+   567→        await post('/api/shifts', body)
+   568→        toast.success('Turno creado')
+   569→      }
+   570→      onSaved()
+   571→    } catch {
+   572→      toast.error('No se pudo guardar')
+   573→    } finally {
+   574→      setSaving(false)
+   575→    }
+   576→  }
+   577→
+   578→  return (
+   579→    <ModalShell
+   580→      open
+   581→      onClose={onClose}
+   582→      title={isEdit ? 'Editar turno' : 'Nuevo turno'}
+   583→      size="lg"
+   584→      footer={
+   585→        <>
+   586→          <button className="btn-ghost text-sm" onClick={onClose}>Cancelar</button>
+   587→          <button className="btn-sage text-sm" onClick={save} disabled={saving}>
+   588→            <Save className="w-4 h-4" /> {saving ? 'Guardando…' : 'Guardar'}
+   589→          </button>
+   590→        </>
+   591→      }
+   592→    >
+   593→      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   594→        <div className="sm:col-span-3">
+   595→          <label className="text-sm font-medium block mb-1.5">Nombre *</label>
+   596→          <input className="input-wellness" value={name} onChange={(e) => setName(e.target.value)} placeholder="Mañana" />
+   597→        </div>
+   598→        <div>
+   599→          <label className="text-sm font-medium block mb-1.5">Hora inicio</label>
+   600→          <input className="input-wellness" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+   601→        </div>
+   602→        <div>
+   603→          <label className="text-sm font-medium block mb-1.5">Hora fin</label>
+   604→          <input className="input-wellness" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+   605→        </div>
+   606→        <div className="sm:col-span-3">
+   607→          <label className="text-sm font-medium block mb-1.5">Días de la semana</label>
+   608→          <div className="flex gap-1.5">
+   609→            {DOW_LABELS.map((d, idx) => (
+   610→              <button
+   611→                key={idx}
+   612→                type="button"
+   613→                onClick={() => toggleDay(idx)}
+   614→                className={`w-10 h-10 rounded-md text-sm font-medium transition-colors ${
+   615→                  days.includes(idx)
+   616→                    ? 'bg-[color:var(--sage)] text-[color:var(--sage-foreground)]'
+   617→                    : 'bg-muted text-muted-foreground hover:bg-accent'
+   618→                }`}
+   619→              >
+   620→                {d}
+   621→              </button>
+   622→            ))}
+   623→          </div>
+   624→        </div>
+   625→        <div className="sm:col-span-3">
+   626→          <label className="text-sm font-medium block mb-1.5">Protocolo de apertura (un paso por línea)</label>
+   627→          <textarea
+   628→            className="input-wellness min-h-[120px] resize-y font-mono text-xs"
+   629→            value={openingProtocol}
+   630→            onChange={(e) => setOpeningProtocol(e.target.value)}
+   631→          />
+   632→        </div>
+   633→        <div className="sm:col-span-3">
+   634→          <label className="text-sm font-medium block mb-1.5">Protocolo de cierre (un paso por línea)</label>
+   635→          <textarea
+   636→            className="input-wellness min-h-[120px] resize-y font-mono text-xs"
+   637→            value={closingProtocol}
+   638→            onChange={(e) => setClosingProtocol(e.target.value)}
+   639→          />
+   640→        </div>
+   641→      </div>
+   642→    </ModalShell>
+   643→  )
+   644→}
+   645→
+   646→// ---------- Deudas ----------
+   647→
+   648→function DeudasTab() {
+   649→  const [items, setItems] = useState<ShiftDebt[]>([])
+   650→  const [loading, setLoading] = useState(true)
+   651→  const [filter, setFilter] = useState<'all' | 'pending' | 'paid'>('pending')
+   652→
+   653→  async function load() {
+   654→    setLoading(true)
+   655→    try {
+   656→      const data = await get<ShiftDebt[]>('/api/shift-debts')
+   657→      setItems(data)
+   658→    } catch {
+   659→      toast.error('No se pudieron cargar las deudas')
+   660→    } finally {
+   661→      setLoading(false)
+   662→    }
+   663→  }
+   664→  useEffect(() => {
+   665→    load()
+   666→  }, [])
+   667→
+   668→  const filtered = useMemo(() => {
+   669→    if (filter === 'pending') return items.filter((d) => !d.isPaid)
+   670→    if (filter === 'paid') return items.filter((d) => d.isPaid)
+   671→    return items
+   672→  }, [items, filter])
+   673→
+   674→  return (
+   675→    <div>
+   676→      <Toolbar>
+   677→        <div className="inline-flex bg-muted/60 rounded-full p-1">
+   678→          {([
+   679→            ['pending', 'Pendientes'],
+   680→            ['paid', 'Pagadas'],
+   681→            ['all', 'Todas'],
+   682→          ] as const).map(([id, label]) => (
+   683→            <button
+   684→              key={id}
+   685→              onClick={() => setFilter(id)}
+   686→              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+   687→                filter === id ? 'bg-card text-sage shadow-sm' : 'text-muted-foreground hover:text-foreground'
+   688→              }`}
+   689→            >
+   690→              {label}
+   691→            </button>
+   692→          ))}
+   693→        </div>
+   694→      </Toolbar>
+   695→
+   696→      <Card className="p-0 overflow-hidden">
+   697→        {loading ? (
+   698→          <LoadingBlock label="Cargando deudas…" />
+   699→        ) : filtered.length === 0 ? (
+   700→          <EmptyState icon={<Coins className="w-6 h-6" />} title="Sin deudas" description="No hay deudas en este filtro." />
+   701→        ) : (
+   702→          <div className="overflow-x-auto custom-scroll">
+   703→            <table className="w-full text-sm">
+   704→              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+   705→                <tr>
+   706→                  <th className="text-left font-medium px-4 py-3">Empleado</th>
+   707→                  <th className="text-left font-medium px-4 py-3">Motivo</th>
+   708→                  <th className="text-left font-medium px-4 py-3">Estado</th>
+   709→                  <th className="text-left font-medium px-4 py-3">Fecha</th>
+   710→                  <th className="text-right font-medium px-4 py-3">Acciones</th>
+   711→                </tr>
+   712→              </thead>
+   713→              <tbody className="divide-y divide-border">
+   714→                {filtered.map((d) => (
+   715→                  <tr key={d.id} className="hover:bg-accent/40">
+   716→                    <td className="px-4 py-3 font-medium">{d.user?.name || '—'}</td>
+   717→                    <td className="px-4 py-3 text-muted-foreground">{d.reason}</td>
+   718→                    <td className="px-4 py-3">
+   719→                      {d.isPaid ? (
+   720→                        <Badge variant="sage"><CheckCircle2 className="w-3 h-3" /> Pagada</Badge>
+   721→                      ) : (
+   722→                        <Badge variant="warn"><XCircle className="w-3 h-3" /> Pendiente</Badge>
+   723→                      )}
+   724→                    </td>
+   725→                    <td className="px-4 py-3 text-muted-foreground">{formatDate(d.createdAt)}</td>
+   726→                    <td className="px-4 py-3 text-right">
+   727→                      {!d.isPaid && (
+   728→                        <button
+   729→                          className="btn-sage text-xs px-3 py-1.5"
+   730→                          onClick={async () => {
+   731→                            try {
+   732→                              await put(`/api/shift-debts/${d.id}/pay`)
+   733→                              toast.success('Deuda marcada como pagada')
+   734→                              load()
+   735→                            } catch {
+   736→                              toast.error('No se pudo actualizar')
+   737→                            }
+   738→                          }}
+   739→                        >
+   740→                          <CheckCircle2 className="w-3.5 h-3.5" /> Marcar pagada
+   741→                        </button>
+   742→                      )}
+   743→                    </td>
+   744→                  </tr>
+   745→                ))}
+   746→              </tbody>
+   747→            </table>
+   748→          </div>
+   749→        )}
+   750→      </Card>
+   751→    </div>
+   752→  )
+   753→}
+   754→
+   755→// Avoid TS unused warnings for imports
+   756→

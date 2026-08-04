@@ -32,7 +32,8 @@ export async function GET(req: Request) {
   }
 }
 
-// POST — create sale + sale items, decrement inventory stock for each productId
+// POST — create sale + sale items, decrement raw materials stock based on each product's recipe
+// For each item with productId, fetch the product's ProductRecipe entries and decrement each RawMaterial.stock by quantity*recipe.quantity
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -62,14 +63,22 @@ export async function POST(req: Request) {
         include: { items: true, employee: { select: { id: true, name: true } } },
       })
 
-      // decrement inventory for each productId
+      // Decrement raw materials based on each product's recipe
       for (const it of items) {
-        if (it.productId) {
-          const inv = await tx.inventory.findUnique({ where: { productId: it.productId } })
-          if (inv) {
-            await tx.inventory.update({
-              where: { productId: it.productId },
-              data: { stock: { decrement: Number(it.quantity) } },
+        const pid = it.productId
+        if (!pid) continue
+        const qty = Number(it.quantity) || 0
+        if (qty <= 0) continue
+        // Fetch recipes for this product
+        const recipes = await tx.productRecipe.findMany({
+          where: { productId: pid },
+        })
+        for (const recipe of recipes) {
+          const decrementBy = recipe.quantity * qty
+          if (decrementBy > 0) {
+            await tx.rawMaterial.update({
+              where: { id: recipe.rawMaterialId },
+              data: { stock: { decrement: decrementBy } },
             })
           }
         }

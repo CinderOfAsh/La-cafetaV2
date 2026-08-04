@@ -273,7 +273,7 @@ export function DashboardView() {
               </Card>
             </div>
 
-            {/* Swaps + debts */}
+            {/* Swaps + suministros (compras) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
                 <h3 className="font-serif text-lg mb-3">Cambios de turno ({stats.swaps.length})</h3>
@@ -295,18 +295,28 @@ export function DashboardView() {
                 )}
               </Card>
               <Card>
-                <h3 className="font-serif text-lg mb-3">Deudas pendientes ({stats.pendingDebts.length})</h3>
-                {stats.pendingDebts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No hay deudas pendientes.</p>
+                <div className="flex items-baseline justify-between mb-3">
+                  <h3 className="font-serif text-lg">Compras de suministros</h3>
+                  <span className="text-sm text-muted-foreground">
+                    {stats.purchasesCount} {stats.purchasesCount === 1 ? 'compra' : 'compras'} ·{' '}
+                    <span className="text-[color:var(--warn)] font-semibold">{eur(stats.totalPurchases)}</span>
+                  </span>
+                </div>
+                {stats.recentPurchases.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No hay compras en el periodo.</p>
                 ) : (
                   <ul className="space-y-2">
-                    {stats.pendingDebts.map((d) => (
-                      <li key={d.id} className="text-sm flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/40">
+                    {stats.recentPurchases.map((p) => (
+                      <li key={p.id} className="text-sm flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/40">
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{d.user?.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{d.reason}</p>
+                          <p className="font-medium truncate">
+                            {p.supplier || 'Sin proveedor'} · {p.itemCount} {p.itemCount === 1 ? 'item' : 'items'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{formatDate(p.date)}</p>
                         </div>
-                        <span className="text-xs text-muted-foreground shrink-0">{formatDate(d.createdAt)}</span>
+                        <span className="text-sm font-semibold text-[color:var(--warn)] shrink-0">
+                          {eur(p.totalAmount)}
+                        </span>
                       </li>
                     ))}
                   </ul>

@@ -55,7 +55,7 @@ export async function POST(req: Request) {
         shiftId,
         userId,
         date,
-        role: role || 'ANOTADOR',
+        role: role || 'CAMARERO',
       },
       include: {
         shift: true,

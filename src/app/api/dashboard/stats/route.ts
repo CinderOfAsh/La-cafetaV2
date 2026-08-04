@@ -49,16 +49,16 @@ export async function GET(req: Request) {
       }
     }
 
-    // critical stock
-    const inventories = await db.inventory.findMany({ include: { product: true } })
-    const criticalStock = inventories
-      .filter((i) => i.stock < i.minStock)
-      .map((i) => ({
-        id: i.id,
-        name: i.product.name,
-        stock: i.stock,
-        minStock: i.minStock,
-        unit: i.unit,
+    // critical stock — now based on RawMaterial
+    const materials = await db.rawMaterial.findMany()
+    const criticalStock = materials
+      .filter((m) => m.stock < m.minStock)
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        stock: m.stock,
+        minStock: m.minStock,
+        unit: m.unit,
       }))
 
     // top employees (top 3 by sales count + total)
@@ -127,12 +127,21 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' },
     })
 
-    // pending debts
-    const pendingDebts = await db.shiftDebt.findMany({
-      where: { isPaid: false },
-      include: { user: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: 'desc' },
+    // purchases (suministros) in period
+    const purchases = await db.purchase.findMany({
+      where: { date: { gte: start, lte: end } },
+      include: { items: true },
+      orderBy: { date: 'desc' },
     })
+    const totalPurchases = purchases.reduce((s, p) => s + p.totalAmount, 0)
+    const purchasesCount = purchases.length
+    const recentPurchases = purchases.slice(0, 10).map((p) => ({
+      id: p.id,
+      date: p.date.toISOString(),
+      supplier: p.supplier,
+      totalAmount: p.totalAmount,
+      itemCount: p.items.length,
+    }))
 
     return NextResponse.json({
       data: {
@@ -146,7 +155,9 @@ export async function GET(req: Request) {
         paymentMethods,
         topProducts,
         swaps,
-        pendingDebts,
+        totalPurchases,
+        purchasesCount,
+        recentPurchases,
       },
     })
   } catch (err: any) {

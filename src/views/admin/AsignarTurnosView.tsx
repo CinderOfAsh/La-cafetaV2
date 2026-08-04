@@ -254,7 +254,7 @@ function DayDialog({
   onChanged: () => void
 }) {
   const [shiftId, setShiftId] = useState(shifts[0]?.id ?? '')
-  const [role, setRole] = useState('ANOTADOR')
+  const [role, setRole] = useState('CAMARERO')
   const [saving, setSaving] = useState(false)
   const full = existing.length >= 2
 
@@ -352,9 +352,8 @@ function DayDialog({
         <div>
           <label className="text-sm font-medium block mb-1.5">Rol</label>
           <select className="input-wellness" value={role} onChange={(e) => setRole(e.target.value)} disabled={full}>
-            <option value="ANOTADOR">ANOTADOR</option>
+            <option value="CAMARERO">CAMARERO</option>
             <option value="COCINERO">COCINERO</option>
-            <option value="EMPLOYEE">EMPLOYEE</option>
           </select>
         </div>
       </div>

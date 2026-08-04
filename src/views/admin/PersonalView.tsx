@@ -23,7 +23,7 @@ import { get, post, put, del } from '@/lib/api'
 import { toast } from 'sonner'
 import { downloadCsv } from '@/lib/export-csv'
 import { formatDate, DOW_LABELS, parseDays } from '@/lib/format'
-import type { Shift, ShiftDebt, Role } from '@/lib/types'
+import type { Shift, Role } from '@/lib/types'
 
 // DB user shape
 interface DbUser {
@@ -38,7 +38,7 @@ interface DbUser {
 
 export function PersonalView() {
   const setView = useAppStore((s) => s.setView)
-  const [tab, setTab] = useState<'empleados' | 'turnos' | 'deudas'>('empleados')
+  const [tab, setTab] = useState<'empleados' | 'turnos'>('empleados')
 
   return (
     <>
@@ -46,16 +46,14 @@ export function PersonalView() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <BookmarkTabs
           active={tab}
-          onChange={(id) => setTab(id as 'empleados' | 'turnos' | 'deudas')}
+          onChange={(id) => setTab(id as 'empleados' | 'turnos')}
           tabs={[
             { id: 'empleados', label: 'Empleados' },
             { id: 'turnos', label: 'Turnos' },
-            { id: 'deudas', label: 'Deudas' },
           ]}
         />
         {tab === 'empleados' && <EmpleadosTab />}
         {tab === 'turnos' && <TurnosTab />}
-        {tab === 'deudas' && <DeudasTab />}
       </main>
     </>
   )
@@ -71,7 +69,6 @@ function EmpleadosTab() {
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<DbUser | null>(null)
   const [creating, setCreating] = useState(false)
-  const [debtFor, setDebtFor] = useState<DbUser | null>(null)
 
   async function load() {
     setLoading(true)
@@ -176,14 +173,6 @@ function EmpleadosTab() {
                           <CalendarDays className="w-4 h-4" />
                         </button>
                         <button
-                          className="btn-ghost p-2 text-xs"
-                          onClick={() => setDebtFor(u)}
-                          aria-label={`Añadir deuda a ${u.name}`}
-                          title="Añadir deuda"
-                        >
-                          <Coins className="w-4 h-4" />
-                        </button>
-                        <button
                           className="btn-ghost p-2"
                           onClick={() => setEditing(u)}
                           aria-label={`Editar ${u.name}`}
@@ -231,9 +220,6 @@ function EmpleadosTab() {
         />
       )}
 
-      {debtFor && (
-        <DebtDialog user={debtFor} onClose={() => setDebtFor(null)} onSaved={() => setDebtFor(null)} />
-      )}
     </div>
   )
 }
@@ -351,61 +337,6 @@ function UserDialog({
           <KVEditor value={customFields} onChange={setCustomFields} />
         </div>
       </div>
-    </ModalShell>
-  )
-}
-
-function DebtDialog({
-  user,
-  onClose,
-  onSaved,
-}: {
-  user: DbUser
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const [reason, setReason] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  async function save() {
-    if (!reason.trim()) {
-      toast.error('Indica el motivo de la deuda')
-      return
-    }
-    setSaving(true)
-    try {
-      await post('/api/shift-debts', { userId: user.id, reason: reason.trim() })
-      toast.success('Deuda registrada')
-      onSaved()
-    } catch {
-      toast.error('No se pudo registrar la deuda')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <ModalShell
-      open
-      onClose={onClose}
-      title={`Añadir deuda a ${user.name}`}
-      size="sm"
-      footer={
-        <>
-          <button className="btn-ghost text-sm" onClick={onClose}>Cancelar</button>
-          <button className="btn-sage text-sm" onClick={save} disabled={saving}>
-            {saving ? 'Guardando…' : 'Registrar'}
-          </button>
-        </>
-      }
-    >
-      <label className="text-sm font-medium block mb-1.5">Motivo</label>
-      <textarea
-        className="input-wellness min-h-[80px] resize-y"
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="Ej: Caja cuadrada con -5€"
-      />
     </ModalShell>
   )
 }
@@ -643,113 +574,6 @@ function ShiftDialog({
   )
 }
 
-// ---------- Deudas ----------
-
-function DeudasTab() {
-  const [items, setItems] = useState<ShiftDebt[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'paid'>('pending')
-
-  async function load() {
-    setLoading(true)
-    try {
-      const data = await get<ShiftDebt[]>('/api/shift-debts')
-      setItems(data)
-    } catch {
-      toast.error('No se pudieron cargar las deudas')
-    } finally {
-      setLoading(false)
-    }
-  }
-  useEffect(() => {
-    load()
-  }, [])
-
-  const filtered = useMemo(() => {
-    if (filter === 'pending') return items.filter((d) => !d.isPaid)
-    if (filter === 'paid') return items.filter((d) => d.isPaid)
-    return items
-  }, [items, filter])
-
-  return (
-    <div>
-      <Toolbar>
-        <div className="inline-flex bg-muted/60 rounded-full p-1">
-          {([
-            ['pending', 'Pendientes'],
-            ['paid', 'Pagadas'],
-            ['all', 'Todas'],
-          ] as const).map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => setFilter(id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                filter === id ? 'bg-card text-sage shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </Toolbar>
-
-      <Card className="p-0 overflow-hidden">
-        {loading ? (
-          <LoadingBlock label="Cargando deudas…" />
-        ) : filtered.length === 0 ? (
-          <EmptyState icon={<Coins className="w-6 h-6" />} title="Sin deudas" description="No hay deudas en este filtro." />
-        ) : (
-          <div className="overflow-x-auto custom-scroll">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
-                <tr>
-                  <th className="text-left font-medium px-4 py-3">Empleado</th>
-                  <th className="text-left font-medium px-4 py-3">Motivo</th>
-                  <th className="text-left font-medium px-4 py-3">Estado</th>
-                  <th className="text-left font-medium px-4 py-3">Fecha</th>
-                  <th className="text-right font-medium px-4 py-3">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((d) => (
-                  <tr key={d.id} className="hover:bg-accent/40">
-                    <td className="px-4 py-3 font-medium">{d.user?.name || '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{d.reason}</td>
-                    <td className="px-4 py-3">
-                      {d.isPaid ? (
-                        <Badge variant="sage"><CheckCircle2 className="w-3 h-3" /> Pagada</Badge>
-                      ) : (
-                        <Badge variant="warn"><XCircle className="w-3 h-3" /> Pendiente</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(d.createdAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      {!d.isPaid && (
-                        <button
-                          className="btn-sage text-xs px-3 py-1.5"
-                          onClick={async () => {
-                            try {
-                              await put(`/api/shift-debts/${d.id}/pay`)
-                              toast.success('Deuda marcada como pagada')
-                              load()
-                            } catch {
-                              toast.error('No se pudo actualizar')
-                            }
-                          }}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Marcar pagada
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-    </div>
-  )
-}
+// (Deudas eliminado — se retomará más adelante)
 
 // Avoid TS unused warnings for imports
