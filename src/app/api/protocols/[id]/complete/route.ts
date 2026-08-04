@@ -8,6 +8,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params
     const body = await req.json().catch(() => ({}))
     const date = body?.date || new Date().toISOString().slice(0, 10)
+    // Note: when no date is provided, we use server UTC date. Client should always send local date.
     const user = await getCurrentUser()
     const completedBy = body?.completedBy || user?.name || null
 

@@ -7,7 +7,7 @@ import { Card, ModalShell, Badge, LoadingBlock, EmptyState } from '@/components/
 import { useAppStore } from '@/lib/store'
 import { get, post, del } from '@/lib/api'
 import { toast } from 'sonner'
-import { DOW_LABELS, MONTHS_ES, todayStr, mondayFirstOffset, parseDays } from '@/lib/format'
+import { DOW_LABELS, MONTHS_ES, todayStr, mondayFirstOffset, parseDays, localDateStr } from '@/lib/format'
 import type { Shift, ShiftAssignment } from '@/lib/types'
 
 interface DbUser {
@@ -60,8 +60,8 @@ export function AsignarTurnosView() {
       try {
         const y = monthCursor.getFullYear()
         const m = monthCursor.getMonth()
-        const start = new Date(y, m, 1).toISOString().slice(0, 10)
-        const end = new Date(y, m + 1, 0).toISOString().slice(0, 10)
+        const start = localDateStr(new Date(y, m, 1))
+        const end = localDateStr(new Date(y, m + 1, 0))
         // Fetch ALL assignments (no userId filter) — we'll filter client-side by date
         const data = await get<ShiftAssignment[]>(`/api/shift-assignments`)
         setAllAssignments(data.filter((a) => a.date >= start && a.date <= end))
@@ -95,7 +95,7 @@ export function AsignarTurnosView() {
     const cells: { date: string | null; day: number | null }[] = []
     for (let i = 0; i < startOffset; i++) cells.push({ date: null, day: null })
     for (let d = 1; d <= total; d++) {
-      const date = new Date(y, m, d).toISOString().slice(0, 10)
+      const date = localDateStr(new Date(y, m, d))
       cells.push({ date, day: d })
     }
     while (cells.length % 7 !== 0) cells.push({ date: null, day: null })
@@ -247,8 +247,8 @@ export function AsignarTurnosView() {
             ;(async () => {
               const y = monthCursor.getFullYear()
               const m = monthCursor.getMonth()
-              const start = new Date(y, m, 1).toISOString().slice(0, 10)
-              const end = new Date(y, m + 1, 0).toISOString().slice(0, 10)
+              const start = localDateStr(new Date(y, m, 1))
+              const end = localDateStr(new Date(y, m + 1, 0))
               const data = await get<ShiftAssignment[]>(`/api/shift-assignments`)
               setAllAssignments(data.filter((a) => a.date >= start && a.date <= end))
               setSelectedDate(null)
@@ -297,16 +297,17 @@ function DayDialog({
   }
 
   async function assign() {
-    if (!shiftId) {
+    if (!shiftId || availableShifts.length === 0) {
       toast.error('No hay turnos disponibles para este día')
       return
     }
     if (shiftFull) {
-      toast.error('Este turno ya tiene 2 personas asignadas. No se puede añadir más.')
+      const shiftName = availableShifts.find((s) => s.id === shiftId)?.name || 'ese turno'
+      toast.error(`El turno ${shiftName} ya tiene 2 personas asignadas. No se puede añadir más gente.`)
       return
     }
-    if (takenRoles.has(role)) {
-      toast.error(`El rol ${role} ya está asignado a este turno.`)
+    if (availableRoles.length === 0) {
+      toast.error('Ambos roles ya están asignados a este turno. No se puede añadir más gente.')
       return
     }
     setSaving(true)
@@ -343,7 +344,7 @@ function DayDialog({
           <button
             className="btn-sage text-sm"
             onClick={assign}
-            disabled={saving || availableShifts.length === 0 || shiftFull || availableRoles.length === 0}
+            disabled={saving || availableShifts.length === 0}
           >
             <Plus className="w-4 h-4" /> {saving ? 'Asignando…' : 'Asignar'}
           </button>
@@ -417,60 +418,49 @@ function DayDialog({
         )}
       </div>
 
-      {/* New assignment form — only show if there are available shifts and roles */}
-      {availableShifts.length > 0 && (
-        <>
-          {shiftFull ? (
-            <div className="p-3 rounded-lg bg-[rgba(199,123,92,0.10)] text-[color:var(--warn)] text-sm flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>
-                El turno <strong>{availableShifts.find((s) => s.id === shiftId)?.name}</strong> ya tiene 2 personas asignadas.
-                No se puede añadir más gente a este turno. Prueba con otro turno.
-              </span>
-            </div>
-          ) : availableRoles.length === 0 ? (
-            <div className="p-3 rounded-lg bg-[rgba(199,123,92,0.10)] text-[color:var(--warn)] text-sm flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>
-                Ambos roles (cocinero y camarero) ya están asignados a este turno.
-                No se puede añadir más gente.
-              </span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Turno</label>
-                <select
-                  className="input-wellness"
-                  value={shiftId}
-                  onChange={(e) => setShiftId(e.target.value)}
-                >
-                  {availableShifts.map((s) => {
-                    const count = existing.filter((a) => a.shiftId === s.id).length
-                    return (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.startTime}–{s.endTime}){count > 0 ? ` · ${count}/2` : ''}
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1.5">Rol</label>
-                <select
-                  className="input-wellness"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                >
-                  {/* Only show available (not taken) roles */}
-                  {availableRoles.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-        </>
+      {/* New assignment form — always show selects so user can change shift/role */}
+      {availableShifts.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm font-medium block mb-1.5">Turno</label>
+            <select
+              className="input-wellness"
+              value={shiftId}
+              onChange={(e) => setShiftId(e.target.value)}
+            >
+              {availableShifts.map((s) => {
+                const count = existing.filter((a) => a.shiftId === s.id).length
+                return (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.startTime}–{s.endTime}){count > 0 ? ` · ${count}/2` : ''}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium block mb-1.5">Rol</label>
+            <select
+              className="input-wellness"
+              value={availableRoles.includes(role as 'CAMARERO' | 'COCINERO') ? role : (availableRoles[0] || 'CAMARERO')}
+              onChange={(e) => setRole(e.target.value)}
+              disabled={availableRoles.length === 0}
+            >
+              {availableRoles.length === 0 ? (
+                <option value="">Ambos roles ocupados</option>
+              ) : (
+                availableRoles.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
+      ) : (
+        <div className="p-3 rounded-lg bg-[rgba(199,123,92,0.10)] text-[color:var(--warn)] text-sm flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>No hay turnos programados para este día de la semana.</span>
+        </div>
       )}
     </ModalShell>
   )

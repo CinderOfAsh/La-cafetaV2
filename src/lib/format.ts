@@ -33,7 +33,17 @@ export function formatDateTime(d: string | Date): string {
 }
 
 export function toDateInput(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  return localDateStr(d)
+}
+
+// Format a Date as YYYY-MM-DD using LOCAL time components (not UTC).
+// This avoids the timezone shift bug where toISOString() can move the date
+// backwards by one day when the local timezone is ahead of UTC.
+export function localDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 export function daysAgo(n: number): Date {
@@ -79,9 +89,9 @@ export function parseDays(csv?: string): number[] {
   return csv.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
 }
 
-// Today's date as YYYY-MM-DD
+// Today's date as YYYY-MM-DD (local time)
 export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10)
+  return localDateStr(new Date())
 }
 
 export function useNow(): Date {

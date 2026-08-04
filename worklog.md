@@ -446,3 +446,50 @@ Stage Summary:
 - Calendario admin muestra TODAS las asignaciones del mes con responsables
 - Días no programados (fin de semana) deshabilitados para asignación
 - Resumen de ventas al cerrar turno con KPIs, métodos de pago y top productos
+
+---
+Task ID: 9
+Agent: Super Z (main)
+Task: Fix calendario desplazado por timezone + notificación toast en asignación
+
+Work Log:
+- BUG RAÍZ: toISOString() convierte a UTC. El servidor está en UTC pero el navegador del usuario está en Madrid (UTC+2). Cuando el cliente crea new Date(2026, 7, 3) a medianoche local, toISOString() retrocede un día → "2026-08-02" en lugar de "2026-08-03". Esto desplazaba TODO el calendario un día atrás.
+- FIX: creada función localDateStr(d) en format.ts que usa getFullYear/getMonth/getDate (componentes LOCALES) en lugar de toISOString (UTC):
+  ```js
+  export function localDateStr(d: Date): string {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  ```
+- Reemplazadas 12 ocurrencias de .toISOString().slice(0,10) en frontend:
+  - format.ts: toDateInput() y todayStr()
+  - AsignarTurnosView.tsx: 4 ocurrencias (monthDays + reload × 2 + filter)
+  - CalendarioView.tsx: 3 ocurrencias (visibleAssignments + monthCells)
+  - ProductosView.tsx: 1 ocurrencia (PurchaseDialog date default)
+- Verificado con Agent Browser (cliente en Madrid UTC+2):
+  - DOW labels: ["L", "M", "X", "J", "V", "S", "D"] (Lunes primero) ✓
+  - Día 3 (lunes) en columna 0 (L) ✓
+  - Día 4 (martes, hoy) en columna 1 (M) ✓
+  - todayDate: "Tue Aug 04 2026" = martes 4 ✓ (coincide con calendario)
+  - Día 8 (sábado) disabled, opacity 0.4 ✓
+  - Día 9 (domingo) disabled, opacity 0.4 ✓
+- FIX notificación turno lleno:
+  - Eliminados los avisos inline (div rojo) que reemplazaban los selects cuando el turno estaba lleno
+  - Los selects de Turno y Rol siempre están visibles para que el usuario pueda cambiar de turno sin cerrar el modal
+  - El botón "Asignar" ya no se deshabilita por shiftFull — el usuario puede hacer clic y recibe un toast
+  - toast.error() aparece en esquina superior derecha como el resto de notificaciones
+  - Mensajes: "El turno Mañana ya tiene 2 personas asignadas. No se puede añadir más gente."
+  - Cuando ambos roles están cogidos: "Ambos roles ya están asignados a este turno. No se puede añadir más gente."
+  - El select de Turno muestra "X/2" en cada opción para que el usuario sepa cuáles están llenos
+  - El select de Rol solo muestra los disponibles (los tomados se ocultan)
+  - Verificado: click en día 4 (Mañana lleno 2/2) → cambió a "noche" automáticamente → cambió a "Mañana" → click Asignar → toast rojo "El turno Mañana ya tiene 2 personas asignadas" → cambió a "Tarde" → ambos roles disponibles → se pudo asignar
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Calendario alineado correctamente con zona horaria del usuario (Madrid UTC+2)
+- Semana empieza en lunes, días coinciden con fechas reales
+- Sábados y domingos deshabilitados correctamente
+- Notificaciones de turno lleno como toast en esquina superior derecha
+- Selects siempre visibles para cambiar de turno sin cerrar el modal

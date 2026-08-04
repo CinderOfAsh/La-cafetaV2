@@ -26,7 +26,7 @@ import { useAppStore } from '@/lib/store'
 import { get, post, put, del } from '@/lib/api'
 import { toast } from 'sonner'
 import { downloadCsv } from '@/lib/export-csv'
-import { eur } from '@/lib/format'
+import { eur, localDateStr } from '@/lib/format'
 import type { Product, RawMaterial, ProductRecipe, Purchase, PurchaseItem } from '@/lib/types'
 
 type Tab = 'productos' | 'materias' | 'lista-compra' | 'compras'
@@ -1343,7 +1343,7 @@ function PurchaseDialog({
   onClose: () => void
   onSaved: () => void
 }) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(localDateStr(new Date()))
   const [supplier, setSupplier] = useState('')
   const [notes, setNotes] = useState('')
   const [materials, setMaterials] = useState<RawMaterial[]>([])

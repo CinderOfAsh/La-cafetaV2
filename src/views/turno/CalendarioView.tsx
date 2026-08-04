@@ -12,7 +12,7 @@ import { Card, ModalShell, Badge, LoadingBlock, EmptyState } from '@/components/
 import { useAppStore } from '@/lib/store'
 import { get, post } from '@/lib/api'
 import { toast } from 'sonner'
-import { DOW_LABELS, MONTHS_ES, todayStr, mondayFirstOffset } from '@/lib/format'
+import { DOW_LABELS, MONTHS_ES, todayStr, mondayFirstOffset, localDateStr } from '@/lib/format'
 import type { ShiftAssignment, ShiftSwap, SwapType } from '@/lib/types'
 
 interface DbUser {
@@ -86,7 +86,7 @@ export function CalendarioView() {
 
   const visibleAssignments = useMemo(() => {
     if (mode === 'dia') {
-      const ds = cursor.toISOString().slice(0, 10)
+      const ds = localDateStr(cursor)
       return assignments.filter((a) => a.date === ds)
     }
     if (mode === 'semana') {
@@ -104,8 +104,8 @@ export function CalendarioView() {
     }
     const y = cursor.getFullYear()
     const m = cursor.getMonth()
-    const start = new Date(y, m, 1).toISOString().slice(0, 10)
-    const end = new Date(y, m + 1, 0).toISOString().slice(0, 10)
+    const start = localDateStr(new Date(y, m, 1))
+    const end = localDateStr(new Date(y, m + 1, 0))
     return assignments.filter((a) => a.date >= start && a.date <= end)
   }, [assignments, cursor, mode])
 
@@ -121,7 +121,7 @@ export function CalendarioView() {
     const cells: { date: string | null; day: number | null }[] = []
     for (let i = 0; i < startOffset; i++) cells.push({ date: null, day: null })
     for (let d = 1; d <= total; d++) {
-      const date = new Date(y, m, d).toISOString().slice(0, 10)
+      const date = localDateStr(new Date(y, m, d))
       cells.push({ date, day: d })
     }
     while (cells.length % 7 !== 0) cells.push({ date: null, day: null })
