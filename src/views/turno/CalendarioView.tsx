@@ -12,7 +12,7 @@ import { Card, ModalShell, Badge, LoadingBlock, EmptyState } from '@/components/
 import { useAppStore } from '@/lib/store'
 import { get, post } from '@/lib/api'
 import { toast } from 'sonner'
-import { DOW_LABELS, MONTHS_ES, todayStr } from '@/lib/format'
+import { DOW_LABELS, MONTHS_ES, todayStr, mondayFirstOffset } from '@/lib/format'
 import type { ShiftAssignment, ShiftSwap, SwapType } from '@/lib/types'
 
 interface DbUser {
@@ -109,14 +109,14 @@ export function CalendarioView() {
     return assignments.filter((a) => a.date >= start && a.date <= end)
   }, [assignments, cursor, mode])
 
-  // For month mode: render calendar grid
+  // For month mode: render calendar grid (Monday-first)
   const monthCells = useMemo(() => {
     if (mode !== 'mes') return []
     const y = cursor.getFullYear()
     const m = cursor.getMonth()
     const first = new Date(y, m, 1)
     const last = new Date(y, m + 1, 0)
-    const startOffset = first.getDay()
+    const startOffset = mondayFirstOffset(first.getDay())
     const total = last.getDate()
     const cells: { date: string | null; day: number | null }[] = []
     for (let i = 0; i < startOffset; i++) cells.push({ date: null, day: null })

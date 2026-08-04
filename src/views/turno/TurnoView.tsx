@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AppHeader } from '@/components/AppHeader'
-import { Card, Badge, LoadingBlock } from '@/components/shared'
+import { Card, Badge, LoadingBlock, ModalShell } from '@/components/shared'
 import { ProtocolChecklist } from '@/components/ProtocolChecklist'
 import { useAppStore } from '@/lib/store'
 import { get, post } from '@/lib/api'
-import { todayStr } from '@/lib/format'
+import { todayStr, eur } from '@/lib/format'
 import { LivePizarra } from '@/components/pos'
-import { Sunrise, Sunset, Lock, CheckCircle2, LogOut, RotateCcw } from 'lucide-react'
+import { Sunrise, Sunset, Lock, CheckCircle2, LogOut, RotateCcw, TrendingUp, ShoppingCart, Banknote, CreditCard, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Shift, ShiftAssignment, Protocol } from '@/lib/types'
+import type { Shift, ShiftAssignment, Protocol, SaleTransaction } from '@/lib/types'
 
-type TurnoStage = 'apertura' | 'ventas' | 'cierre' | 'finalizado'
+type TurnoStage = 'apertura' | 'ventas' | 'cierre' | 'resumen' | 'finalizado'
 
 const STORAGE_KEY_PREFIX = 'lacafeta:turno:'
 
@@ -24,6 +24,9 @@ export function TurnoView() {
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [loading, setLoading] = useState(true)
   const [stage, setStage] = useState<TurnoStage>('apertura')
+  // Sales summary for the resumen modal
+  const [shiftSales, setShiftSales] = useState<SaleTransaction[]>([])
+  const [loadingSales, setLoadingSales] = useState(false)
   const date = todayStr()
   const storageKey = `${STORAGE_KEY_PREFIX}${user.id}:${date}`
 
@@ -121,8 +124,18 @@ export function TurnoView() {
     } catch {
       // non-blocking
     }
-    toast.success('Turno finalizado correctamente')
-    persistStage('finalizado')
+    // Load today's sales by this employee for the summary
+    setLoadingSales(true)
+    try {
+      const sales = await get<SaleTransaction[]>(`/api/sales?employeeId=${user.id}&date=${date}`)
+      setShiftSales(sales)
+    } catch {
+      setShiftSales([])
+    } finally {
+      setLoadingSales(false)
+    }
+    toast.success('Protocolo de cierre completado')
+    persistStage('resumen')
   }
 
   const hasShift = !!shift
@@ -134,7 +147,30 @@ export function TurnoView() {
   // Determine which overlay to show
   const showAperturaOverlay = hasOpeningProtocol && effectiveStage === 'apertura'
   const showCierreOverlay = hasClosingProtocol && effectiveStage === 'cierre'
+  const showResumen = effectiveStage === 'resumen'
   const showFinalizado = effectiveStage === 'finalizado'
+
+  // Compute sales summary for the resumen modal
+  const salesSummary = useMemo(() => {
+    const totalVentas = shiftSales.length
+    const ingresos = shiftSales.reduce((s, x) => s + x.total, 0)
+    const efectivo = shiftSales.filter((s) => s.paymentMethod === 'cash').reduce((s, x) => s + x.total, 0)
+    const tarjeta = shiftSales.filter((s) => s.paymentMethod === 'card').reduce((s, x) => s + x.total, 0)
+    const itemsVendidos = shiftSales.reduce((s, x) => s + (x.items?.reduce((acc, it) => acc + it.quantity, 0) || 0), 0)
+    // Top product
+    const prodAgg = new Map<string, { name: string; qty: number; revenue: number }>()
+    for (const s of shiftSales) {
+      for (const it of (s.items || [])) {
+        const key = it.productId || it.productName
+        const prev = prodAgg.get(key) || { name: it.productName, qty: 0, revenue: 0 }
+        prev.qty += it.quantity
+        prev.revenue += it.price * it.quantity
+        prodAgg.set(key, prev)
+      }
+    }
+    const topProducts = Array.from(prodAgg.values()).sort((a, b) => b.qty - a.qty).slice(0, 5)
+    return { totalVentas, ingresos, efectivo, tarjeta, itemsVendidos, topProducts }
+  }, [shiftSales])
 
   return (
     <>
@@ -232,6 +268,14 @@ export function TurnoView() {
             onCancel={() => persistStage('ventas')}
             forceOpen={false}
           />
+        ) : showResumen ? (
+          <ShiftSummaryModal
+            summary={salesSummary}
+            loading={loadingSales}
+            shiftName={shift?.name || ''}
+            onContinue={() => persistStage('finalizado')}
+            onReabrir={() => persistStage('ventas')}
+          />
         ) : (
           <>
             {/* POS panel */}
@@ -291,5 +335,131 @@ export function TurnoView() {
         )}
       </main>
     </>
+  )
+}
+
+// ---------- Shift Summary Modal ----------
+
+function ShiftSummaryModal({
+  summary,
+  loading,
+  shiftName,
+  onContinue,
+  onReabrir,
+}: {
+  summary: {
+    totalVentas: number
+    ingresos: number
+    efectivo: number
+    tarjeta: number
+    itemsVendidos: number
+    topProducts: { name: string; qty: number; revenue: number }[]
+  }
+  loading: boolean
+  shiftName: string
+  onContinue: () => void
+  onReabrir: () => void
+}) {
+  return (
+    <ModalShell
+      open
+      onClose={onContinue}
+      title={`Resumen del turno ${shiftName}`}
+      description="Estas son tus ventas de hoy antes de cerrar el turno."
+      size="md"
+      footer={
+        <>
+          <button className="btn-outline text-sm" onClick={onReabrir}>
+            <RotateCcw className="w-4 h-4" /> Reabrir turno
+          </button>
+          <button className="btn-sage text-sm" onClick={onContinue}>
+            <CheckCircle2 className="w-4 h-4" /> Finalizar turno
+          </button>
+        </>
+      }
+    >
+      {loading ? (
+        <div className="py-8 text-center text-sm text-muted-foreground">Cargando ventas…</div>
+      ) : (
+        <div className="space-y-4">
+          {/* KPI grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-accent p-4 border border-border">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 rounded-full bg-[rgba(127,166,155,0.15)] text-sage flex items-center justify-center">
+                  <ShoppingCart className="w-4 h-4" />
+                </div>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Ventas</span>
+              </div>
+              <p className="text-2xl font-semibold text-foreground">{summary.totalVentas}</p>
+              <p className="text-xs text-muted-foreground">{summary.itemsVendidos} items vendidos</p>
+            </div>
+            <div className="rounded-lg bg-accent p-4 border border-border">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 rounded-full bg-[rgba(127,166,155,0.15)] text-sage flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Ingresos</span>
+              </div>
+              <p className="text-2xl font-semibold text-sage">{eur(summary.ingresos)}</p>
+              <p className="text-xs text-muted-foreground">total del turno</p>
+            </div>
+          </div>
+
+          {/* Payment methods */}
+          <div className="rounded-lg border border-border p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Métodos de pago</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-[rgba(127,166,155,0.15)] text-sage flex items-center justify-center">
+                  <Banknote className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{eur(summary.efectivo)}</p>
+                  <p className="text-xs text-muted-foreground">Efectivo</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-[rgba(199,123,92,0.15)] text-[color:var(--warn)] flex items-center justify-center">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{eur(summary.tarjeta)}</p>
+                  <p className="text-xs text-muted-foreground">Tarjeta</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top products */}
+          {summary.topProducts.length > 0 && (
+            <div className="rounded-lg border border-border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+                <Receipt className="w-3.5 h-3.5" /> Productos más vendidos
+              </p>
+              <ul className="space-y-2">
+                {summary.topProducts.map((p, i) => (
+                  <li key={i} className="flex items-center justify-between text-sm">
+                    <span className="truncate">
+                      <span className="text-muted-foreground mr-2">#{i + 1}</span>
+                      {p.name}
+                    </span>
+                    <span className="text-muted-foreground shrink-0 ml-2">
+                      <span className="font-medium text-foreground">{p.qty}ud</span> · {eur(p.revenue)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {summary.totalVentas === 0 && (
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              No has registrado ventas durante este turno.
+            </div>
+          )}
+        </div>
+      )}
+    </ModalShell>
   )
 }

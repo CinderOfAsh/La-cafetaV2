@@ -398,3 +398,51 @@ Stage Summary:
 - Calendario del empleado muestra todos los turnos con responsables
 - Reabrir turno cerrado funcional
 - App lista para test del usuario
+
+---
+Task ID: 8
+Agent: Super Z (main)
+Task: Fix calendario (lunes-first), bloqueo por turno (no por día), días válidos, resumen al cerrar
+
+Work Log:
+- Fix calendario desplazado:
+  - DOW_LABELS cambiado de ['D','L','M','X','J','V','S'] a ['L','M','X','J','V','S','D'] (lunes-first)
+  - Añadida función mondayFirstOffset(jsDay) = (jsDay + 6) % 7 en format.ts
+  - AsignarTurnosView: startOffset = mondayFirstOffset(first.getDay()) en lugar de first.getDay()
+  - CalendarioView (empleado): mismo fix en monthCells
+  - Verificado: agosto 2026, día 1 (sábado) cae en columna S (índice 5), días alineados correctamente
+- Fix bloqueo por turno (no por día):
+  - DayDialog: full ahora = existingForShift.length >= 2 (solo las del turno seleccionado), no allForDate.length
+  - availableShifts muestra todos los turnos del día con su ocupación (X/2)
+  - Roles tomados se OCULTAN del select (no se deshabilitan) — solo aparecen los disponibles
+  - Aviso rojo con AlertTriangle cuando el turno seleccionado está lleno
+  - Aviso rojo cuando ambos roles están cogidos en ese turno
+  - Verificado: asignada Aitana (camarera) en Mañana día 12 → CAMARERO desaparece del select, COCINERO sigue disponible → cambié a turno Tarde y ambos roles disponibles
+- AsignarTurnos: cargar TODAS las asignaciones del mes:
+  - allAssignments ahora fetch /api/shift-assignments (sin filter userId)
+  - byDate map contiene todas las asignaciones de todos los usuarios
+  - Celdas del calendario muestran "Mañana: Aitana, Angel" agrupado por turno
+  - DayDialog muestra todas las asignaciones del día agrupadas por turno con nombres + roles + badges X/2
+- Restringir turnos a días válidos:
+  - DayDialog filtra shifts por parseDays(s.daysOfWeek).includes(jsDow)
+  - availableShifts solo incluye turnos programados para ese día de la semana
+  - Calendario: celdas de días no programados (sábados/domingos) están disabled con opacity 0.4
+  - Verificado: sábado día 8 disabled, miércoles día 12 enabled
+- Resumen al cerrar turno:
+  - Nuevo stage 'resumen' entre 'cierre' y 'finalizado'
+  - completeCierre() ahora: completa protocolo, carga ventas del día del empleado, va a stage 'resumen'
+  - ShiftSummaryModal: modal emergente con:
+    - KPI grid: Ventas (nº transacciones + items vendidos) e Ingresos (total €)
+    - Métodos de pago: efectivo vs tarjeta con iconos
+    - Top 5 productos más vendidos del turno
+    - Botones: "Reabrir turno" (vuelve a ventas) y "Finalizar turno" (va a finalizado)
+  - Verificado: 2 ventas (Bocadillo 4€ + Kafe 1,50€ = 5,50€), 2 items, 5,50€ efectivo, 0€ tarjeta, top productos correcto
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Calendario alineado correctamente (lunes-first)
+- Bloqueo de roles por turno independiente (Tarde no se bloquea por Mañana lleno)
+- Roles tomados se ocultan del select (no se deshabilitan)
+- Calendario admin muestra TODAS las asignaciones del mes con responsables
+- Días no programados (fin de semana) deshabilitados para asignación
+- Resumen de ventas al cerrar turno con KPIs, métodos de pago y top productos

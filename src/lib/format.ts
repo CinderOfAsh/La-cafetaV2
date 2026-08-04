@@ -42,8 +42,20 @@ export function daysAgo(n: number): Date {
   return d
 }
 
-export const DOW_LABELS = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
-export const DOW_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+// Week starts on Monday (es-ES convention). DOW_LABELS[0] = Lunes.
+export const DOW_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+export const DOW_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+// Convert JS getDay() (0=Sun..6=Sat) to Monday-first index (0=Mon..6=Sun)
+export function mondayFirstOffset(jsDay: number): number {
+  return (jsDay + 6) % 7
+}
+
+// Spanish name for a JS day-of-week (0=Sun..6=Sat)
+export function dowNameEs(jsDay: number): string {
+  // DOW_FULL is Monday-first, so convert
+  return DOW_FULL[(jsDay + 6) % 7]
+}
 export const MONTHS_ES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
