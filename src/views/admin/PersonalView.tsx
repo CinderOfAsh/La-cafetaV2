@@ -415,16 +415,19 @@ function TurnosTab() {
                   </div>
                 </div>
                 <div className="flex gap-1 mb-3">
-                  {DOW_LABELS.map((d, idx) => (
-                    <span
-                      key={idx}
-                      className={`w-7 h-7 inline-flex items-center justify-center rounded-md text-xs font-medium ${
-                        days.includes(idx) ? 'bg-[color:var(--sage)] text-[color:var(--sage-foreground)]' : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      {d}
-                    </span>
-                  ))}
+                  {DOW_LABELS.map((d, idx) => {
+                    const jsDay = (idx + 1) % 7
+                    return (
+                      <span
+                        key={idx}
+                        className={`w-7 h-7 inline-flex items-center justify-center rounded-md text-xs font-medium ${
+                          days.includes(jsDay) ? 'bg-[color:var(--sage)] text-[color:var(--sage-foreground)]' : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {d}
+                      </span>
+                    )
+                  })}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">{(s.openingProtocol || []).length}</span> pasos apertura ·{' '}
@@ -472,13 +475,31 @@ function ShiftDialog({
   const [closingProtocol, setClosingProtocol] = useState((shift?.closingProtocol || []).join('\n'))
   const [saving, setSaving] = useState(false)
 
-  function toggleDay(d: number) {
-    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()))
+  function toggleDay(idx: number) {
+    // DOW_LABELS is Monday-first (idx 0=Lunes), but days stores JS day numbers (0=Sun, 1=Mon..6=Sat)
+    const jsDay = (idx + 1) % 7 // 0=Lun→1, 1=Mar→2, ..., 5=Sab→6, 6=Dom→0
+    setDays((prev) => (prev.includes(jsDay) ? prev.filter((x) => x !== jsDay) : [...prev, jsDay].sort()))
+  }
+
+  // Check if a Monday-first index is active in the days array
+  function isDayActive(idx: number): boolean {
+    const jsDay = (idx + 1) % 7
+    return days.includes(jsDay)
   }
 
   async function save() {
     if (!name.trim()) {
       toast.error('El nombre es obligatorio')
+      return
+    }
+    // Validate 24h time format (HH:mm)
+    const timeRegex = /^([01][0-9]|2[0-3]):([0-5][0-9])$/
+    if (!timeRegex.test(startTime)) {
+      toast.error('Hora de inicio inválida. Usa formato 24h: HH:mm (ej: 08:45)')
+      return
+    }
+    if (!timeRegex.test(endTime)) {
+      toast.error('Hora de fin inválida. Usa formato 24h: HH:mm (ej: 13:00)')
       return
     }
     setSaving(true)
@@ -527,12 +548,28 @@ function ShiftDialog({
           <input className="input-wellness" value={name} onChange={(e) => setName(e.target.value)} placeholder="Mañana" />
         </div>
         <div>
-          <label className="text-sm font-medium block mb-1.5">Hora inicio</label>
-          <input className="input-wellness" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <label className="text-sm font-medium block mb-1.5">Hora inicio (24h)</label>
+          <input
+            className="input-wellness"
+            type="text"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            placeholder="08:45"
+            pattern="[0-2][0-9]:[0-5][0-9]"
+            maxLength={5}
+          />
         </div>
         <div>
-          <label className="text-sm font-medium block mb-1.5">Hora fin</label>
-          <input className="input-wellness" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <label className="text-sm font-medium block mb-1.5">Hora fin (24h)</label>
+          <input
+            className="input-wellness"
+            type="text"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            placeholder="13:00"
+            pattern="[0-2][0-9]:[0-5][0-9]"
+            maxLength={5}
+          />
         </div>
         <div className="sm:col-span-3">
           <label className="text-sm font-medium block mb-1.5">Días de la semana</label>
@@ -543,7 +580,7 @@ function ShiftDialog({
                 type="button"
                 onClick={() => toggleDay(idx)}
                 className={`w-10 h-10 rounded-md text-sm font-medium transition-colors ${
-                  days.includes(idx)
+                  isDayActive(idx)
                     ? 'bg-[color:var(--sage)] text-[color:var(--sage-foreground)]'
                     : 'bg-muted text-muted-foreground hover:bg-accent'
                 }`}

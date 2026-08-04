@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
+import { localDateStrServer } from '@/lib/server-date'
 
 // POST — mark protocol as completed for today (or given date)
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const body = await req.json().catch(() => ({}))
-    const date = body?.date || new Date().toISOString().slice(0, 10)
+    const date = body?.date || localDateStrServer(new Date())
     // Note: when no date is provided, we use server UTC date. Client should always send local date.
     const user = await getCurrentUser()
     const completedBy = body?.completedBy || user?.name || null

@@ -619,3 +619,39 @@ Stage Summary:
 - Turno da bienvenida a las 2 personas del turno (o Admin si no hay nadie)
 - Dashboard de empleado con selector (impersonal)
 - Calendario sigue siendo personal (identificación requerida)
+
+---
+Task ID: 13
+Agent: Super Z (main)
+Task: Inputs de hora en formato 24h + fix días de la semana + timezone Madrid
+
+Work Log:
+- ShiftDialog (PersonalView): cambiados inputs de hora de type="time" a type="text" con:
+  - Placeholder "08:45" / "13:00"
+  - pattern="[0-2][0-9]:[0-5][0-9]"
+  - maxLength=5
+  - Labels "Hora inicio (24h)" y "Hora fin (24h)"
+  - Validación en save() con regex /^([01][0-9]|2[0-3]):([0-5][0-9])$/
+  - Toast de error si el formato es inválido: "Hora de inicio inválida. Usa formato 24h: HH:mm (ej: 08:45)"
+- Fix bug días de la semana: DOW_LABELS es Monday-first (L,M,X,J,V,S,D) pero days almacenaba JS day numbers (0=Sun..6=Sat)
+  - toggleDay(idx) ahora convierte: jsDay = (idx + 1) % 7 (0=Lun→1, 1=Mar→2, ..., 5=Sab→6, 6=Dom→0)
+  - isDayActive(idx) usa la misma conversión
+  - Lista de turnos: badges de días usan la misma conversión
+  - Verificado: L,M,X,J,V highlighted (sage), S,D no — correcto para turnos L-V
+- Timezone Madrid:
+  - protocols/[id]/complete: cambiado new Date().toISOString().slice(0,10) → localDateStrServer(new Date())
+  - employee-stats ya usaba localDateStrServer
+  - TurnoView: usa new Date().getHours() del navegador (que está en Madrid) — correcto
+  - todayStr() en format.ts usa localDateStr() que ya usa componentes locales — correcto
+- Verificación Agent Browser:
+  - Inputs de hora: texto con placeholder "08:45", valor editable ✓
+  - Validación: "8:45" → error "Hora de inicio inválida. Usa formato 24h: HH:mm (ej: 08:45)" ✓
+  - Guardar con "08:45"-"13:00" → actualizado correctamente ✓
+  - Días: L,M,X,J,V highlighted, S,D no — correcto ✓
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Inputs de hora en formato 24h (texto, no type=time)
+- Validación de formato HH:mm
+- Bug de días desplazados corregido
+- Timezone Madrid en todas las comparaciones de fecha del servidor
