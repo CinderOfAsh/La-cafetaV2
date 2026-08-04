@@ -185,3 +185,48 @@ export interface MyStats {
     items: { name: string; qty: number; price: number }[]
   }[]
 }
+
+export interface EmployeeStats {
+  userId: string
+  userName: string
+  userEmail: string
+  userRole: string
+  // Turnos
+  totalShiftsAssigned: number      // total turnos asignados (histórico + futuro)
+  upcomingShifts: number           // turnos futuros (date >= today)
+  pastShifts: number               // turnos pasados (date < today)
+  shiftList: {
+    id: string
+    date: string
+    shiftName: string
+    startTime: string
+    endTime: string
+    role: string
+    isPast: boolean
+  }[]
+  // Intercambios
+  swapsRequested: number           // solicitudes enviadas
+  swapsReceived: number            // solicitudes recibidas
+  swapsApproved: number            // solicitudes recibidas que aprobó
+  swapsRejected: number            // solicitudes recibidas que rechazó
+  // Roles
+  roleCount: {
+    CAMARERO: number
+    COCINERO: number
+  }
+  // Ventas
+  totalSales: number               // nº de transacciones
+  totalItems: number               // items vendidos
+  totalRevenue: number             // facturación total en €
+  cashRevenue: number
+  cardRevenue: number
+}
+
+// Ranking de ventas para un turno específico (personas en ese turno)
+export interface ShiftSalesRanking {
+  userId: string
+  userName: string
+  role: string
+  sales: number        // nº de transacciones
+  revenue: number      // facturación
+}

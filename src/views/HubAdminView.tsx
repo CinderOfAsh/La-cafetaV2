@@ -7,6 +7,7 @@ import {
   BarChart3,
   FlaskConical,
   ArrowRight,
+  UserCircle,
 } from 'lucide-react'
 import { useAppStore, type View } from '@/lib/store'
 import { AppHeader } from '@/components/AppHeader'
@@ -49,6 +50,13 @@ const cards: HubCard[] = [
     description: 'Métricas de ventas, empleados y stock.',
     icon: BarChart3,
     view: 'admin-dashboard',
+  },
+  {
+    id: 'empleados-stats',
+    title: 'Empleados',
+    description: 'Estadísticas por empleado: turnos, intercambios, roles y ventas.',
+    icon: UserCircle,
+    view: 'admin-empleados',
   },
   {
     id: 'sandbox',

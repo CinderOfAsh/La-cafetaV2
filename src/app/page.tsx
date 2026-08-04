@@ -11,6 +11,7 @@ import { PersonalView } from '@/views/admin/PersonalView'
 import { AsignarTurnosView } from '@/views/admin/AsignarTurnosView'
 import { ProtocolosView } from '@/views/admin/ProtocolosView'
 import { DashboardView } from '@/views/admin/DashboardView'
+import { EmployeesView } from '@/views/admin/EmployeesView'
 import { SandboxView } from '@/views/admin/SandboxView'
 import { TurnoView } from '@/views/turno/TurnoView'
 import { CalendarioView } from '@/views/turno/CalendarioView'
@@ -65,6 +66,8 @@ export default function Home() {
       return <ProtocolosView />
     case 'admin-dashboard':
       return <DashboardView />
+    case 'admin-empleados':
+      return <EmployeesView />
     case 'admin-sandbox':
       return <SandboxView />
     case 'turno':

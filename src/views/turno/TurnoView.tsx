@@ -10,7 +10,7 @@ import { todayStr, eur } from '@/lib/format'
 import { LivePizarra } from '@/components/pos'
 import { Sunrise, Sunset, Lock, CheckCircle2, LogOut, RotateCcw, TrendingUp, ShoppingCart, Banknote, CreditCard, Receipt } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Shift, ShiftAssignment, Protocol, SaleTransaction } from '@/lib/types'
+import type { Shift, ShiftAssignment, Protocol, SaleTransaction, ShiftSalesRanking } from '@/lib/types'
 
 type TurnoStage = 'apertura' | 'ventas' | 'cierre' | 'resumen' | 'finalizado'
 
@@ -26,6 +26,7 @@ export function TurnoView() {
   const [stage, setStage] = useState<TurnoStage>('apertura')
   // Sales summary for the resumen modal
   const [shiftSales, setShiftSales] = useState<SaleTransaction[]>([])
+  const [shiftRanking, setShiftRanking] = useState<ShiftSalesRanking[]>([])
   const [loadingSales, setLoadingSales] = useState(false)
   const date = todayStr()
   const storageKey = `${STORAGE_KEY_PREFIX}${user.id}:${date}`
@@ -124,13 +125,34 @@ export function TurnoView() {
     } catch {
       // non-blocking
     }
-    // Load today's sales by this employee for the summary
+    // Load today's sales by this employee AND the ranking (all employees on this shift today)
     setLoadingSales(true)
     try {
       const sales = await get<SaleTransaction[]>(`/api/sales?employeeId=${user.id}&date=${date}`)
       setShiftSales(sales)
+      // Load ranking: fetch all sales today and all assignments today to compute per-employee sales
+      const [allSales, allAssignments] = await Promise.all([
+        get<SaleTransaction[]>(`/api/sales?date=${date}`),
+        get<ShiftAssignment[]>(`/api/shift-assignments?date=${date}`),
+      ])
+      // For each assignment on this shift today, count sales attributed to that user
+      // Sales are attributed to employeeId; both people on the shift get credited equally
+      const shiftAssignments = allAssignments.filter((a) => a.shiftId === today?.shiftId)
+      const ranking = shiftAssignments.map((a) => {
+        // Count this user's sales today
+        const userSales = allSales.filter((s) => s.employeeId === a.userId)
+        return {
+          userId: a.userId,
+          userName: a.user?.name || '—',
+          role: a.role,
+          sales: userSales.length,
+          revenue: userSales.reduce((sum, s) => sum + s.total, 0),
+        }
+      }).sort((a, b) => b.revenue - a.revenue)
+      setShiftRanking(ranking)
     } catch {
       setShiftSales([])
+      setShiftRanking([])
     } finally {
       setLoadingSales(false)
     }
@@ -139,8 +161,8 @@ export function TurnoView() {
   }
 
   const hasShift = !!shift
-  // If no shift assigned today, skip protocols and go straight to ventas stage
-  const effectiveStage = !hasShift && stage === 'apertura' ? 'ventas' : stage
+  // If no shift assigned today OR shift has no opening protocol, skip to ventas stage
+  const effectiveStage = (stage === 'apertura' && (!hasShift || openingSteps.length === 0)) ? 'ventas' : stage
   const hasOpeningProtocol = hasShift && openingSteps.length > 0
   const hasClosingProtocol = hasShift && closingSteps.length > 0
 
@@ -194,10 +216,17 @@ export function TurnoView() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="sage">{today?.role}</Badge>
-                {effectiveStage === 'ventas' && hasClosingProtocol && (
+                {effectiveStage === 'ventas' && (
                   <button
                     className="btn-outline text-sm"
-                    onClick={() => persistStage('cierre')}
+                    onClick={() => {
+                      // If there's a closing protocol, go through it; otherwise go straight to resumen
+                      if (hasClosingProtocol) {
+                        persistStage('cierre')
+                      } else {
+                        completeCierre()
+                      }
+                    }}
                   >
                     <Sunset className="w-4 h-4" /> Finalizar turno
                   </button>
@@ -271,6 +300,8 @@ export function TurnoView() {
         ) : showResumen ? (
           <ShiftSummaryModal
             summary={salesSummary}
+            ranking={shiftRanking}
+            currentUserId={user.id}
             loading={loadingSales}
             shiftName={shift?.name || ''}
             onContinue={() => persistStage('finalizado')}
@@ -342,6 +373,8 @@ export function TurnoView() {
 
 function ShiftSummaryModal({
   summary,
+  ranking,
+  currentUserId,
   loading,
   shiftName,
   onContinue,
@@ -355,6 +388,8 @@ function ShiftSummaryModal({
     itemsVendidos: number
     topProducts: { name: string; qty: number; revenue: number }[]
   }
+  ranking: ShiftSalesRanking[]
+  currentUserId: string
   loading: boolean
   shiftName: string
   onContinue: () => void
@@ -456,6 +491,40 @@ function ShiftSummaryModal({
           {summary.totalVentas === 0 && (
             <div className="text-center py-6 text-sm text-muted-foreground">
               No has registrado ventas durante este turno.
+            </div>
+          )}
+
+          {/* Ranking de ventas del turno */}
+          {ranking.length > 0 && (
+            <div className="rounded-lg border border-border p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5" /> Ranking de ventas del turno
+              </p>
+              <ul className="space-y-2">
+                {ranking.map((r, i) => (
+                  <li
+                    key={r.userId}
+                    className={`flex items-center justify-between text-sm p-2 rounded-lg ${
+                      r.userId === currentUserId ? 'bg-[rgba(127,166,155,0.15)] border border-[color:var(--sage)]' : 'bg-muted/40'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium w-6">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`}
+                      </span>
+                      <span className="font-medium">
+                        {r.userName}
+                        {r.userId === currentUserId && <span className="text-sage ml-1">(tú)</span>}
+                      </span>
+                      <Badge variant={r.role === 'COCINERO' ? 'sage' : 'muted'}>{r.role}</Badge>
+                    </span>
+                    <span className="text-muted-foreground">
+                      <span className="font-medium text-foreground">{r.sales}</span> ventas ·{' '}
+                      <span className="text-sage font-semibold">{eur(r.revenue)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

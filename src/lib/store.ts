@@ -11,6 +11,7 @@ export type View =
   | 'admin-personal'
   | 'admin-protocolos'
   | 'admin-dashboard'
+  | 'admin-empleados'
   | 'admin-sandbox'
   | 'admin-asignar'
   | 'turno'

@@ -534,3 +534,48 @@ Stage Summary:
 - Solicitudes pendientes aparecen como modal al loguear
 - Revisión con panel lateral desplegable
 - Respuestas con mensajes personalizados ("Enhorabuena mae" / "El diablo loco")
+
+---
+Task ID: 11
+Agent: Super Z (main)
+Task: Vista de estadísticas por empleado + ranking en resumen de turno
+
+Work Log:
+- Schema: añadido EmployeeStats y ShiftSalesRanking a types.ts
+- Creada API /api/dashboard/employee-stats:
+  - Sin userId: devuelve array con stats de TODOS los empleados
+  - Con userId: devuelve stats de un solo empleado
+  - Stats: turnos totales/próximos/pasados, lista de turnos, swaps solicitados/recibidos/aprobados/rechazados, conteo de roles (CAMARERO/COCINERO), ventas (transacciones, items, facturación, efectivo, tarjeta)
+  - Usa localDateStrServer() con timezone Europe/Madrid para comparar fechas correctamente
+- Creado EmployeesView (admin):
+  - Ranking de ventas por facturación con medallas 🥇🥈🥉
+  - Desplegable para seleccionar empleado
+  - KPIs: turnos totales, intercambios solicitados, ventas, facturación
+  - Distribución de roles con barras de progreso
+  - Intercambios recibidos: aprobados/rechazados/total
+  - Ventas detalladas: transacciones, items, efectivo, tarjeta
+  - Historial de turnos expandible con badges pasado/próximo
+- HubAdmin: añadida card "Empleados" con icono UserCircle
+- store.ts: añadido 'admin-empleados' al tipo View
+- page.tsx: enrutamiento de admin-empleados → EmployeesView
+- TurnoView (ShiftSummaryModal): añadido ranking de ventas del turno
+  - Al finalizar turno, carga todas las ventas del día + todas las asignaciones del día
+  - Filtra por shiftId del turno actual
+  - Cada persona del turno aparece con su nombre, rol, nº ventas y facturación
+  - Medallas 🥇🥈🥉, fila del usuario actual resaltada en sage
+- Fix adicional: el botón "Finalizar turno" ahora aparece siempre en stage 'ventas' (no requiere protocolo de cierre)
+- Fix: si el turno no tiene protocolo de apertura, se salta directamente a 'ventas'
+- Fix: si el turno no tiene protocolo de cierre, al finalizar va directo al resumen (sin pasar por el checklist)
+- Verificación Agent Browser:
+  - API employee-stats devuelve 16 empleados con datos correctos ✓
+  - EmployeesView: ranking con Aitana #1 (🥇, 2 ventas, €5,50), Angel con 1 swap aprobado ✓
+  - Distribución de roles: Aitana 4 CAMARERO (67%) + 2 COCINERO (33%) con barras ✓
+  - Resumen de turno: ranking con Aitana #1 (🥇, 4 ventas, €13,50) ✓
+  - Turno "noche" sin protocolos: Finalizar turno → resumen directo (sin checklist) ✓
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Nueva vista de estadísticas por empleado completa en admin
+- Ranking de ventas en el resumen de cierre de turno
+- Botón Finalizar turno siempre disponible en stage ventas
+- Turnos sin protocolos funcionan correctamente (skip al resumen)
