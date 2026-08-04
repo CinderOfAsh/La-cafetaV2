@@ -655,3 +655,24 @@ Stage Summary:
 - Validación de formato HH:mm
 - Bug de días desplazados corregido
 - Timezone Madrid en todas las comparaciones de fecha del servidor
+
+---
+Task ID: 14
+Agent: Super Z (main)
+Task: Fix bienvenida — solo mostrar personas del turno si hay turno activo AHORA
+
+Work Log:
+- TurnoView: eliminado el fallback que cogía el primer turno del día cuando no había turno activo por hora
+- Ahora: si ningún turno incluye la hora actual → shift = null → muestra "Bienvenido, Admin"
+- Banner cuando no hay turno activo:
+  - Eyebrow: "SIN TURNO ACTIVO"
+  - Título: "Bienvenido, Admin"
+  - Descripción: "No hay ningún turno en curso ahora mismo. Puedes realizar ventas de todas formas."
+  - POS disponible debajo (sin protocolos)
+- Verificado: a las 22:56 Madrid con turnos 08:45-13:00 → "Bienvenido, Admin" ✓
+- Lint: 0 errores
+
+Stage Summary:
+- La bienvenida solo aparece si hay un turno realmente activo (por hora)
+- Si no hay turno activo → "Bienvenido, Admin"
+- POS siempre disponible para ventas

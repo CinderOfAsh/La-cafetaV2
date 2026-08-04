@@ -66,10 +66,7 @@ export function TurnoView() {
             break
           }
         }
-        // If no active shift by time, pick the first one of the day (or null)
-        if (!activeShift && assignments.length > 0) {
-          activeShift = assignments[0].shift
-        }
+        // If no active shift by time, leave shift as null → will show "Admin" welcome
         setShift(activeShift)
         const prots = await get<Protocol[]>('/api/protocols')
         setProtocols(prots)
@@ -283,8 +280,14 @@ export function TurnoView() {
           </div>
         ) : (
           <div className="card-wellness p-5 mb-6 bg-muted/40">
-            <p className="text-sm text-muted-foreground">
-              No tienes turno asignado hoy. Puedes realizar ventas de todas formas.
+            <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+              Sin turno activo
+            </p>
+            <h2 className="font-serif text-2xl text-foreground">
+              Bienvenido, Admin
+            </h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              No hay ningún turno en curso ahora mismo. Puedes realizar ventas de todas formas.
             </p>
           </div>
         )}
