@@ -20,26 +20,23 @@ export function ThemeToggle() {
     return (
       <button
         aria-label="Cambiar tema"
-        className="btn-ghost p-2"
-        style={{ width: "36px", height: "36px" }}
+        className="theme-toggle-btn"
       >
-        <Sun className="h-4 w-4" />
+        <Sun className="h-5 w-5" />
       </button>
     );
   }
 
+  const isDark = theme === "dark";
+
   return (
     <button
-      aria-label={theme === "dark" ? "Activar modo claro" : "Activar modo oscuro"}
-      className="btn-ghost p-2"
-      style={{ width: "36px", height: "36px" }}
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+      title={isDark ? "Modo claro" : "Modo oscuro"}
+      className="theme-toggle-btn"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
     >
-      {theme === "dark" ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
+      {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </button>
   );
 }

@@ -94,18 +94,18 @@ function ProductosTab() {
     <div>
       <Toolbar>
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar producto…"
-            className="input-wellness pl-9"
+            className="input-wellness pl-10 pr-9"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground z-10"
               aria-label="Limpiar"
             >
               <X className="w-3.5 h-3.5" />
@@ -337,8 +337,33 @@ function ProductDialog({
             className="input-wellness"
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="/uploads/cafe.jpg"
+            placeholder="https://ejemplo.com/foto.jpg o /uploads/cafe.jpg"
           />
+          {imageUrl && (
+            <div className="mt-2 flex items-center gap-3">
+              <div className="w-16 h-16 rounded-lg bg-muted border border-border overflow-hidden flex items-center justify-center shrink-0">
+                <img
+                  src={imageUrl}
+                  alt="Vista previa"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none'
+                    const parent = e.currentTarget.parentElement
+                    if (parent && !parent.querySelector('.fallback-icon')) {
+                      const span = document.createElement('span')
+                      span.className = 'fallback-icon text-xs text-muted-foreground'
+                      span.textContent = 'error'
+                      parent.appendChild(span)
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vista previa. Si no carga, la URL puede no ser accesible (CORS o hotlinking bloqueado).
+              </p>
+            </div>
+          )}
         </div>
         <div className="sm:col-span-2">
           <label className="text-sm font-medium block mb-1.5">Descripción</label>
@@ -413,13 +438,13 @@ function InventarioTab() {
     <div>
       <Toolbar>
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar producto…"
-            className="input-wellness pl-9"
+            className="input-wellness pl-10"
           />
         </div>
         <button className="btn-outline text-sm" onClick={exportCsv}>

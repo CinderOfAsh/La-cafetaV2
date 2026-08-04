@@ -230,3 +230,58 @@ Stage Summary:
 - Design system Wellness aplicado (sage #7FA69B, Inter+Crimson Text, dark mode)
 - Drag & drop, modals, toasts, filtros, búsqueda, exportación CSV — todo operativo
 - Base de datos seed con 4 users, 16 productos, 2 turnos, 5 ventas, 4 protocolos, 2 deudas
+
+---
+Task ID: 5
+Agent: Super Z (main)
+Task: Correcciones de bugs PC + móvil + re-poblar BD con datos reales del CSV
+
+Work Log:
+- Fix 1 (búsqueda): movido .input-wellness y componentes similares a @layer components en globals.css para que Tailwind utilities (pl-10) puedan sobrescribir el padding. Aumentado padding-left a pl-10 (40px) en SearchInput, pos.tsx (sandbox + live), ProductosView, PersonalView. La lupa ya NO se superpone al texto.
+- Fix 2 (ThemeToggle): reescrito ThemeToggle.tsx con clase .theme-toggle-btn (40x40px, icon 20px, fondo accent + border). Mucho más visible en modo claro. Añadido estilo en globals.css.
+- Fix 3 (imágenes): ProductCard en pos.tsx mejorado con:
+  - Estado imgError para fallback
+  - referrerPolicy="no-referrer" (evita bloqueo hotlinking)
+  - loading="lazy"
+  - onError handler
+  - draggable={false}
+  - Vista previa en modal de edición de producto (ProductosView)
+- Fix 4 (protocolos como checkboxes): creado componente ProtocolChecklist.tsx con checkboxes, barra de progreso, botón bloqueado hasta completar. Reescrito TurnoView.tsx con flujo:
+  - Stage 'apertura' → modal bloqueante con protocolo apertura (forceOpen)
+  - Stage 'ventas' → POS desbloqueado + botón "Finalizar turno"
+  - Stage 'cierre' → modal de cierre (cancelable)
+  - Stage 'finalizado' → pantalla de cierre
+  - Persistencia en localStorage por user+date
+- Fix 5 (flechas reordenar): rewrite de movePriority en LivePizarra para reasignar prioridades globales 0..n-1 (en lugar de solo swap). Sort estable por (priority, createdAt). Las flechas ya funcionan en POS empleado.
+- Fix 6 (header móvil): AppHeader.tsx compactado para móvil:
+  - h-14 en móvil, h-16 en desktop
+  - px-3 en móvil, px-6 en desktop
+  - "La Cafeta" hidden en xs:inline (oculto en <400px si hace falta)
+  - Título hidden en sm:inline (oculto en móvil)
+  - Gap-1.5 en móvil
+  - Cerrar sesión icono-only en móvil (md:hidden)
+  - Verificado: cabe en 320px sin overflow
+- Fix 7 (CSV real): creado scripts/seed-real.ts con parser CSV robusto (maneja comillas). Poblando BD con:
+  - 1 admin + 21 empleados reales (Kawtar, Adri, Claudia, Aitana, Meryl, Sofía, Luca, etc.)
+  - 2 turnos (Mañana 07-14, Tarde 14-21) con protocolos reales (7 pasos apertura, 6 cierre)
+  - 54 productos reales con precios del CSV (Cafe con leche pequeño €1,20-1,30, Sandwich pavo y queso €2,50, etc.)
+  - 2188 ventas reales (ene-abr 2026) con employeeId, paymentMethod, fecha/hora exacta
+  - 315 asignaciones de turno
+  - 4 protocolos + 1 protocolo de producto (café con leche)
+  - 4 materias primas + 2 recetas
+  - 2 deudas de ejemplo
+- Fix 7b (bug protocol complete): corregido /api/protocols/[id]/complete/route.ts que usaba upsert con composite key inexistente. Cambiado a findFirst+update/create.
+- Fix 8 (dashboard con datos reales): verificado que al cambiar rango a ene-abr 2026, el dashboard muestra:
+  - Top 3: Mery (309 ventas, €540,95), Aitana (199, €358,25), Sofía (195, €388,05)
+  - Pagos: 17% efectivo, 83% tarjeta
+  - Ventas por hora 08:00-14:00
+- Lint: 0 errores, 0 warnings
+- Verificación Agent Browser: login, protocol checklist (apertura 7/7 + cierre 6/6), venta real, flechas reordenar (3 comandas), imagen producto (Unsplash URL cargada), dark mode, header móvil 320px — todo OK
+
+Stage Summary:
+- 6 bugs de UI/UX corregidos
+- BD poblada con 2188 ventas reales del CSV
+- 21 empleados reales con turnos asignados
+- 54 productos con precios reales
+- Flujo de protocolos con checkboxes bloqueantes implementado y verificado end-to-end
+- App lista para tests del usuario

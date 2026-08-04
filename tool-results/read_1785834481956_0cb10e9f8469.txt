@@ -1,0 +1,763 @@
+     1→'use client'
+     2→
+     3→import { useEffect, useMemo, useRef, useState } from 'react'
+     4→import {
+     5→  Search,
+     6→  X,
+     7→  Banknote,
+     8→  CreditCard,
+     9→  ScrollText,
+    10→  ArrowUp,
+    11→  ArrowDown,
+    12→  Check,
+    13→  Trash2,
+    14→  Package as PackageIcon,
+    15→} from 'lucide-react'
+    16→import {
+    17→  DndContext,
+    18→  closestCenter,
+    19→  KeyboardSensor,
+    20→  PointerSensor,
+    21→  useSensor,
+    22→  useSensors,
+    23→  type DragEndEvent,
+    24→} from '@dnd-kit/core'
+    25→import {
+    26→  arrayMove,
+    27→  SortableContext,
+    28→  sortableKeyboardCoordinates,
+    29→  useSortable,
+    30→  verticalListSortingStrategy,
+    31→} from '@dnd-kit/sortable'
+    32→import { CSS } from '@dnd-kit/utilities'
+    33→import { Card, ModalShell, Badge, LoadingBlock, EmptyState } from '@/components/shared'
+    34→import { BookmarkTabs } from '@/components/shared'
+    35→import { get, post, put, del } from '@/lib/api'
+    36→import { toast } from 'sonner'
+    37→import { eur } from '@/lib/format'
+    38→import type { Product, Protocol, SaleItem, PaymentMethod } from '@/lib/types'
+    39→
+    40→// ---------- Sandbox view (local state, no DB) ----------
+    41→
+    42→interface SandboxComanda {
+    43→  id: string
+    44→  name: string
+    45→  price: number
+    46→  priority: number
+    47→  payment: PaymentMethod
+    48→  status: 'PENDING' | 'DELIVERED'
+    49→}
+    50→
+    51→export function SandboxPizarra({ products }: { products: Product[] }) {
+    52→  const [order, setOrder] = useState<string[]>(() => products.map((p) => p.id))
+    53→  const [search, setSearch] = useState('')
+    54→  const [activeTag, setActiveTag] = useState('todos')
+    55→  const [paymentModal, setPaymentModal] = useState<Product | null>(null)
+    56→  const [protocolModal, setProtocolModal] = useState<Protocol | null>(null)
+    57→  const [comandas, setComandas] = useState<SandboxComanda[]>([])
+    58→  const [protocols, setProtocols] = useState<Protocol[]>([])
+    59→
+    60→  useEffect(() => {
+    61→    setOrder(products.map((p) => p.id))
+    62→  }, [products])
+    63→
+    64→  useEffect(() => {
+    65→    get<Protocol[]>('/api/protocols').then(setProtocols).catch(() => {})
+    66→  }, [])
+    67→
+    68→  const tags = useMemo(() => {
+    69→    const s = new Set<string>()
+    70→    for (const p of products) for (const t of p.tags || []) s.add(t)
+    71→    return ['todos', ...Array.from(s).sort()]
+    72→  }, [products])
+    73→
+    74→  const filtered = useMemo(() => {
+    75→    const q = search.trim().toLowerCase()
+    76→    return order
+    77→      .map((id) => products.find((p) => p.id === id))
+    78→      .filter(Boolean)
+    79→      .filter((p) => (activeTag === 'todos' ? true : (p!.tags || []).includes(activeTag)))
+    80→      .filter((p) => (q ? p!.name.toLowerCase().includes(q) : true)) as Product[]
+    81→  }, [order, products, search, activeTag])
+    82→
+    83→  const sensors = useSensors(
+    84→    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    85→    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    86→  )
+    87→
+    88→  function onDragEnd(e: DragEndEvent) {
+    89→    const { active, over } = e
+    90→    if (!over || active.id === over.id) return
+    91→    setOrder((prev) => {
+    92→      const oldI = prev.indexOf(active.id as string)
+    93→      const newI = prev.indexOf(over.id as string)
+    94→      return arrayMove(prev, oldI, newI)
+    95→    })
+    96→  }
+    97→
+    98→  function addSale(product: Product, payment: PaymentMethod) {
+    99→    const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+   100→    setComandas((prev) => [
+   101→      ...prev,
+   102→      {
+   103→        id,
+   104→        name: product.name,
+   105→        price: product.price,
+   106→        priority: prev.filter((c) => c.status === 'PENDING').length,
+   107→        payment,
+   108→        status: 'PENDING',
+   109→      },
+   110→    ])
+   111→    setPaymentModal(null)
+   112→    toast.success(`Venta simulada: ${product.name} (${payment === 'cash' ? 'efectivo' : 'tarjeta'})`)
+   113→  }
+   114→
+   115→  function move(id: string, dir: -1 | 1) {
+   116→    setComandas((prev) => {
+   117→      const pending = prev.filter((c) => c.status === 'PENDING')
+   118→      const idx = pending.findIndex((c) => c.id === id)
+   119→      if (idx === -1) return prev
+   120→      const newIdx = idx + dir
+   121→      if (newIdx < 0 || newIdx >= pending.length) return prev
+   122→      const reordered = [...pending]
+   123→      ;[reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]]
+   124→      // reassign priorities
+   125→      reordered.forEach((c, i) => (c.priority = i))
+   126→      // merge back: keep DELIVERED items first, then pending by priority
+   127→      const delivered = prev.filter((c) => c.status === 'DELIVERED')
+   128→      return [...delivered, ...reordered]
+   129→    })
+   130→  }
+   131→
+   132→  function markDone(id: string) {
+   133→    setComandas((prev) => {
+   134→      const next = prev.map((c) => (c.id === id ? { ...c, status: 'DELIVERED' as const } : c))
+   135→      // reassign priorities among pending
+   136→      let p = 0
+   137→      return next.map((c) => {
+   138→        if (c.status === 'PENDING') return { ...c, priority: p++ }
+   139→        return c
+   140→      })
+   141→    })
+   142→  }
+   143→
+   144→  function remove(id: string) {
+   145→    setComandas((prev) => {
+   146→      const next = prev.filter((c) => c.id !== id)
+   147→      let p = 0
+   148→      return next.map((c) => {
+   149→        if (c.status === 'PENDING') return { ...c, priority: p++ }
+   150→        return c
+   151→      })
+   152→    })
+   153→  }
+   154→
+   155→  const pending = comandas.filter((c) => c.status === 'PENDING')
+   156→  const delivered = comandas.filter((c) => c.status === 'DELIVERED')
+   157→  const total = delivered.reduce((s, c) => s + c.price, 0)
+   158→  const cashTotal = delivered.filter((c) => c.payment === 'cash').reduce((s, c) => s + c.price, 0)
+   159→  const cardTotal = delivered.filter((c) => c.payment === 'card').reduce((s, c) => s + c.price, 0)
+   160→
+   161→  return (
+   162→    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+   163→      {/* Pizarra */}
+   164→      <div>
+   165→        <BookmarkTabs
+   166→          active={activeTag}
+   167→          onChange={setActiveTag}
+   168→          tabs={tags.map((t) => ({ id: t, label: t === 'todos' ? 'Todos' : t }))}
+   169→        />
+   170→        <div className="relative mb-4">
+   171→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+   172→          <input
+   173→            type="search"
+   174→            value={search}
+   175→            onChange={(e) => setSearch(e.target.value)}
+   176→            placeholder="Buscar producto…"
+   177→            className="input-wellness pl-9 pr-9"
+   178→          />
+   179→          {search && (
+   180→            <button
+   181→              onClick={() => setSearch('')}
+   182→              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+   183→              aria-label="Limpiar"
+   184→            >
+   185→              <X className="w-3.5 h-3.5" />
+   186→            </button>
+   187→          )}
+   188→        </div>
+   189→
+   190→        {filtered.length === 0 ? (
+   191→          <EmptyState icon={<PackageIcon className="w-6 h-6" />} title="Sin productos" />
+   192→        ) : (
+   193→          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+   194→            <SortableContext
+   195→              items={search || activeTag !== 'todos' ? [] : filtered.map((p) => p.id)}
+   196→              strategy={verticalListSortingStrategy}
+   197→            >
+   198→              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+   199→                {filtered.map((p) => {
+   200→                  const productProtocol = protocols.find((pr) => pr.productId === p.id)
+   201→                  return (
+   202→                    <ProductCard
+   203→                      key={p.id}
+   204→                      product={p}
+   205→                      draggable={!search && activeTag === 'todos'}
+   206→                      hasProtocol={!!productProtocol}
+   207→                      onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
+   208→                      onClick={() => setPaymentModal(p)}
+   209→                    />
+   210→                  )
+   211→                })}
+   212→              </div>
+   213→            </SortableContext>
+   214→          </DndContext>
+   215→        )}
+   216→      </div>
+   217→
+   218→      {/* Comandas panel */}
+   219→      <div className="lg:sticky lg:top-20 self-start">
+   220→        <Card>
+   221→          <div className="flex items-center justify-between mb-3">
+   222→            <h3 className="font-serif text-lg">Comandas simuladas</h3>
+   223→            <Badge variant="muted">{pending.length} pendientes</Badge>
+   224→          </div>
+   225→
+   226→          {comandas.length === 0 ? (
+   227→            <p className="text-sm text-muted-foreground py-6 text-center">
+   228→              Haz click en un producto para crear una venta simulada.
+   229→            </p>
+   230→          ) : (
+   231→            <ul className="space-y-2 max-h-[420px] overflow-y-auto custom-scroll pr-1">
+   232→              {pending
+   233→                .sort((a, b) => a.priority - b.priority)
+   234→                .map((c) => (
+   235→                  <ComandaItem
+   236→                    key={c.id}
+   237→                    comanda={c}
+   238→                    onUp={() => move(c.id, -1)}
+   239→                    onDown={() => move(c.id, 1)}
+   240→                    onDone={() => markDone(c.id)}
+   241→                    onRemove={() => remove(c.id)}
+   242→                  />
+   243→                ))}
+   244→              {delivered.map((c) => (
+   245→                <li key={c.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 opacity-60">
+   246→                  <span className="text-sm line-through">{c.name}</span>
+   247→                  <span className="text-sm text-sage">{eur(c.price)}</span>
+   248→                </li>
+   249→              ))}
+   250→            </ul>
+   251→          )}
+   252→
+   253→          <div className="mt-4 pt-4 border-t border-border space-y-1.5 text-sm">
+   254→            <Row label="Total vendido" value={eur(total)} bold />
+   255→            <Row label="Efectivo" value={eur(cashTotal)} icon={<Banknote className="w-3.5 h-3.5" />} />
+   256→            <Row label="Tarjeta" value={eur(cardTotal)} icon={<CreditCard className="w-3.5 h-3.5" />} />
+   257→          </div>
+   258→        </Card>
+   259→      </div>
+   260→
+   261→      {paymentModal && (
+   262→        <PaymentModal
+   263→          product={paymentModal}
+   264→          onClose={() => setPaymentModal(null)}
+   265→          onSelect={(m) => addSale(paymentModal, m)}
+   266→        />
+   267→      )}
+   268→
+   269→      {protocolModal && (
+   270→        <ProtocolModal protocol={protocolModal} onClose={() => setProtocolModal(null)} />
+   271→      )}
+   272→    </div>
+   273→  )
+   274→}
+   275→
+   276→// ---------- Shared sub-components ----------
+   277→
+   278→function ProductCard({
+   279→  product,
+   280→  draggable,
+   281→  hasProtocol,
+   282→  onProtocol,
+   283→  onClick,
+   284→}: {
+   285→  product: Product
+   286→  draggable: boolean
+   287→  hasProtocol: boolean
+   288→  onProtocol: () => void
+   289→  onClick: () => void
+   290→}) {
+   291→  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+   292→    id: product.id,
+   293→    disabled: !draggable,
+   294→  })
+   295→  const style: React.CSSProperties = {
+   296→    transform: CSS.Transform.toString(transform),
+   297→    transition,
+   298→    opacity: isDragging ? 0.5 : 1,
+   299→  }
+   300→  return (
+   301→    <div
+   302→      ref={setNodeRef}
+   303→      style={style}
+   304→      {...attributes}
+   305→      className={`card-wellness p-3 flex flex-col gap-2 ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+   306→    >
+   307→      <div
+   308→        {...listeners}
+   309→        className="aspect-square rounded-lg bg-muted flex items-center justify-center overflow-hidden"
+   310→        onClick={onClick}
+   311→      >
+   312→        {product.imageUrl ? (
+   313→          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+   314→        ) : (
+   315→          <PackageIcon className="w-8 h-8 text-muted-foreground" />
+   316→        )}
+   317→      </div>
+   318→      <div className="flex items-start justify-between gap-1">
+   319→        <p className="text-sm font-medium leading-tight">{product.name}</p>
+   320→        {hasProtocol && (
+   321→          <button
+   322→            className="btn-ghost p-1 -mt-1 -mr-1 text-sage"
+   323→            onClick={(e) => {
+   324→              e.stopPropagation()
+   325→              onProtocol()
+   326→            }}
+   327→            aria-label="Ver protocolo"
+   328→            title="Protocolo"
+   329→          >
+   330→            <ScrollText className="w-3.5 h-3.5" />
+   331→          </button>
+   332→        )}
+   333→      </div>
+   334→      <p className="text-sage font-semibold">{eur(product.price)}</p>
+   335→    </div>
+   336→  )
+   337→}
+   338→
+   339→function ComandaItem({
+   340→  comanda,
+   341→  onUp,
+   342→  onDown,
+   343→  onDone,
+   344→  onRemove,
+   345→}: {
+   346→  comanda: { id: string; name: string; price: number; priority: number; payment: PaymentMethod }
+   347→  onUp: () => void
+   348→  onDown: () => void
+   349→  onDone: () => void
+   350→  onRemove: () => void
+   351→}) {
+   352→  return (
+   353→    <li className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+   354→      <span className="w-7 h-7 rounded-full bg-[color:var(--sage)] text-[color:var(--sage-foreground)] inline-flex items-center justify-center text-xs font-bold shrink-0">
+   355→        {comanda.priority + 1}
+   356→      </span>
+   357→      <div className="flex-1 min-w-0">
+   358→        <p className="text-sm font-medium truncate">{comanda.name}</p>
+   359→        <p className="text-xs text-sage font-semibold inline-flex items-center gap-1">
+   360→          {comanda.payment === 'cash' ? <Banknote className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
+   361→          {eur(comanda.price)}
+   362→        </p>
+   363→      </div>
+   364→      <div className="flex items-center gap-0.5">
+   365→        <button className="btn-ghost p-1" onClick={onUp} aria-label="Subir prioridad" title="Subir">
+   366→          <ArrowUp className="w-3.5 h-3.5" />
+   367→        </button>
+   368→        <button className="btn-ghost p-1" onClick={onDown} aria-label="Bajar prioridad" title="Bajar">
+   369→          <ArrowDown className="w-3.5 h-3.5" />
+   370→        </button>
+   371→        <button className="btn-ghost p-1 text-sage" onClick={onDone} aria-label="Entregar" title="Entregado">
+   372→          <Check className="w-3.5 h-3.5" />
+   373→        </button>
+   374→        <button className="btn-ghost p-1 text-muted-foreground hover:text-[color:var(--warn)]" onClick={onRemove} aria-label="Eliminar" title="Eliminar">
+   375→          <Trash2 className="w-3.5 h-3.5" />
+   376→        </button>
+   377→      </div>
+   378→    </li>
+   379→  )
+   380→}
+   381→
+   382→function PaymentModal({
+   383→  product,
+   384→  onClose,
+   385→  onSelect,
+   386→}: {
+   387→  product: Product
+   388→  onClose: () => void
+   389→  onSelect: (m: PaymentMethod) => void
+   390→}) {
+   391→  return (
+   392→    <ModalShell
+   393→      open
+   394→      onClose={onClose}
+   395→      title={product.name}
+   396→      description={`Selecciona el método de pago · ${eur(product.price)}`}
+   397→      size="sm"
+   398→    >
+   399→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   400→        <button
+   401→          className="card-wellness hover-lift p-6 flex flex-col items-center gap-3 text-center"
+   402→          onClick={() => onSelect('cash')}
+   403→        >
+   404→          <div className="w-12 h-12 rounded-full bg-[rgba(127,166,155,0.15)] text-sage flex items-center justify-center">
+   405→            <Banknote className="w-6 h-6" />
+   406→          </div>
+   407→          <div>
+   408→            <p className="font-semibold">Efectivo</p>
+   409→            <p className="text-xs text-muted-foreground">{eur(product.price)}</p>
+   410→          </div>
+   411→        </button>
+   412→        <button
+   413→          className="card-wellness hover-lift p-6 flex flex-col items-center gap-3 text-center"
+   414→          onClick={() => onSelect('card')}
+   415→        >
+   416→          <div className="w-12 h-12 rounded-full bg-[rgba(199,123,92,0.15)] text-[color:var(--warn)] flex items-center justify-center">
+   417→            <CreditCard className="w-6 h-6" />
+   418→          </div>
+   419→          <div>
+   420→            <p className="font-semibold">Tarjeta</p>
+   421→            <p className="text-xs text-muted-foreground">{eur(product.price)}</p>
+   422→          </div>
+   423→        </button>
+   424→      </div>
+   425→    </ModalShell>
+   426→  )
+   427→}
+   428→
+   429→function ProtocolModal({ protocol, onClose }: { protocol: Protocol; onClose: () => void }) {
+   430→  return (
+   431→    <ModalShell
+   432→      open
+   433→      onClose={onClose}
+   434→      title={protocol.name}
+   435→      description={protocol.description || `Protocolo de tipo ${protocol.type}`}
+   436→      size="md"
+   437→    >
+   438→      <ol className="space-y-3">
+   439→        {(protocol.steps || []).map((step, i) => (
+   440→          <li key={i} className="flex gap-3">
+   441→            <span className="w-7 h-7 rounded-full bg-[color:var(--sage)] text-[color:var(--sage-foreground)] inline-flex items-center justify-center text-xs font-bold shrink-0">
+   442→              {i + 1}
+   443→            </span>
+   444→            <p className="text-sm leading-relaxed pt-0.5">{step}</p>
+   445→          </li>
+   446→        ))}
+   447→      </ol>
+   448→    </ModalShell>
+   449→  )
+   450→}
+   451→
+   452→function Row({
+   453→  label,
+   454→  value,
+   455→  icon,
+   456→  bold,
+   457→}: {
+   458→  label: string
+   459→  value: string
+   460→  icon?: React.ReactNode
+   461→  bold?: boolean
+   462→}) {
+   463→  return (
+   464→    <div className={`flex items-center justify-between ${bold ? 'font-semibold text-foreground text-base pt-1' : 'text-muted-foreground'}`}>
+   465→      <span className="inline-flex items-center gap-1.5">
+   466→        {icon} {label}
+   467→      </span>
+   468→      <span className={bold ? 'text-sage' : ''}>{value}</span>
+   469→    </div>
+   470→  )
+   471→}
+   472→
+   473→// ---------- Live POS component (uses DB) ----------
+   474→
+   475→interface LiveComanda extends SaleItem {
+   476→  payment: PaymentMethod
+   477→  name: string
+   478→}
+   479→
+   480→export function LivePizarra({ employeeId }: { employeeId: string }) {
+   481→  const [products, setProducts] = useState<Product[]>([])
+   482→  const [protocols, setProtocols] = useState<Protocol[]>([])
+   483→  const [order, setOrder] = useState<string[]>([])
+   484→  const [search, setSearch] = useState('')
+   485→  const [activeTag, setActiveTag] = useState('todos')
+   486→  const [paymentModal, setPaymentModal] = useState<Product | null>(null)
+   487→  const [protocolModal, setProtocolModal] = useState<Protocol | null>(null)
+   488→  const [comandas, setComandas] = useState<LiveComanda[]>([])
+   489→  const [loading, setLoading] = useState(true)
+   490→  const refreshTimer = useRef<number | null>(null)
+   491→
+   492→  useEffect(() => {
+   493→    ;(async () => {
+   494→      try {
+   495→        const [p, prots] = await Promise.all([
+   496→          get<Product[]>('/api/products?active=true'),
+   497→          get<Protocol[]>('/api/protocols'),
+   498→        ])
+   499→        setProducts(p)
+   500→        setProtocols(prots)
+   501→        setOrder(p.map((x) => x.id))
+   502→      } catch {
+   503→        toast.error('No se pudieron cargar productos')
+   504→      } finally {
+   505→        setLoading(false)
+   506→      }
+   507→    })()
+   508→  }, [])
+   509→
+   510→  // Refresh pending sale items every 5s and on focus
+   511→  async function loadComandas() {
+   512→    try {
+   513→      // We need all pending sale items for the employee — fetch recent sales and pull items
+   514→      const sales = await get<any[]>(`/api/sales?employeeId=${employeeId}`)
+   515→      const items: LiveComanda[] = []
+   516→      for (const s of sales) {
+   517→        for (const it of s.items || []) {
+   518→          if (it.status === 'PENDING') {
+   519→            items.push({ ...it, payment: s.paymentMethod, name: it.productName })
+   520→          }
+   521→        }
+   522→      }
+   523→      // Also load any DELIVERED in the last 24h for totals
+   524→      const now = new Date()
+   525→      const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+   526→      const deliveredToday: LiveComanda[] = []
+   527→      for (const s of sales) {
+   528→        if (new Date(s.createdAt) < cutoff) continue
+   529→        for (const it of s.items || []) {
+   530→          if (it.status === 'DELIVERED') {
+   531→            deliveredToday.push({ ...it, payment: s.paymentMethod, name: it.productName })
+   532→          }
+   533→        }
+   534→      }
+   535→      setComandas([...items.sort((a, b) => a.priority - b.priority), ...deliveredToday])
+   536→    } catch {
+   537→      // ignore
+   538→    }
+   539→  }
+   540→
+   541→  useEffect(() => {
+   542→    loadComandas()
+   543→    refreshTimer.current = window.setInterval(loadComandas, 8000)
+   544→    return () => {
+   545→      if (refreshTimer.current) window.clearInterval(refreshTimer.current)
+   546→    }
+   547→  }, [employeeId])
+   548→
+   549→  const tags = useMemo(() => {
+   550→    const s = new Set<string>()
+   551→    for (const p of products) for (const t of p.tags || []) s.add(t)
+   552→    return ['todos', ...Array.from(s).sort()]
+   553→  }, [products])
+   554→
+   555→  const filtered = useMemo(() => {
+   556→    const q = search.trim().toLowerCase()
+   557→    return order
+   558→      .map((id) => products.find((p) => p.id === id))
+   559→      .filter(Boolean)
+   560→      .filter((p) => (activeTag === 'todos' ? true : (p!.tags || []).includes(activeTag)))
+   561→      .filter((p) => (q ? p!.name.toLowerCase().includes(q) : true)) as Product[]
+   562→  }, [order, products, search, activeTag])
+   563→
+   564→  const sensors = useSensors(
+   565→    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+   566→    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+   567→  )
+   568→  function onDragEnd(e: DragEndEvent) {
+   569→    const { active, over } = e
+   570→    if (!over || active.id === over.id) return
+   571→    setOrder((prev) => {
+   572→      const oldI = prev.indexOf(active.id as string)
+   573→      const newI = prev.indexOf(over.id as string)
+   574→      return arrayMove(prev, oldI, newI)
+   575→    })
+   576→  }
+   577→
+   578→  async function addSale(product: Product, payment: PaymentMethod) {
+   579→    try {
+   580→      await post('/api/sales', {
+   581→        employeeId,
+   582→        items: [{ productId: product.id, productName: product.name, price: product.price, quantity: 1 }],
+   583→        paymentMethod: payment,
+   584→        total: product.price,
+   585→      })
+   586→      toast.success(`Venta registrada: ${product.name}`)
+   587→      setPaymentModal(null)
+   588→      loadComandas()
+   589→    } catch {
+   590→      toast.error('No se pudo registrar la venta')
+   591→    }
+   592→  }
+   593→
+   594→  async function markDone(itemId: string) {
+   595→    try {
+   596→      await put(`/api/sale-items/${itemId}`, { status: 'DELIVERED' })
+   597→      toast.success('Comanda entregada')
+   598→      loadComandas()
+   599→    } catch {
+   600→      toast.error('No se pudo actualizar')
+   601→    }
+   602→  }
+   603→
+   604→  async function removeItem(itemId: string) {
+   605→    if (!confirm('¿Eliminar esta comanda?')) return
+   606→    try {
+   607→      await del(`/api/sale-items/${itemId}`)
+   608→      toast.success('Comanda eliminada')
+   609→      loadComandas()
+   610→    } catch {
+   611→      toast.error('No se pudo eliminar')
+   612→    }
+   613→  }
+   614→
+   615→  async function movePriority(itemId: string, dir: -1 | 1) {
+   616→    const pending = comandas.filter((c) => c.status === 'PENDING').sort((a, b) => a.priority - b.priority)
+   617→    const idx = pending.findIndex((c) => c.id === itemId)
+   618→    if (idx === -1) return
+   619→    const newIdx = idx + dir
+   620→    if (newIdx < 0 || newIdx >= pending.length) return
+   621→    const a = pending[idx]
+   622→    const b = pending[newIdx]
+   623→    // swap priorities via two PUTs
+   624→    try {
+   625→      await Promise.all([
+   626→        put(`/api/sale-items/${a.id}`, { priority: b.priority }),
+   627→        put(`/api/sale-items/${b.id}`, { priority: a.priority }),
+   628→      ])
+   629→      loadComandas()
+   630→    } catch {
+   631→      toast.error('No se pudo reordenar')
+   632→    }
+   633→  }
+   634→
+   635→  const pending = comandas.filter((c) => c.status === 'PENDING')
+   636→  const delivered = comandas.filter((c) => c.status === 'DELIVERED')
+   637→  const total = delivered.reduce((s, c) => s + c.price * c.quantity, 0)
+   638→  const cashTotal = delivered.filter((c) => c.payment === 'cash').reduce((s, c) => s + c.price * c.quantity, 0)
+   639→  const cardTotal = delivered.filter((c) => c.payment === 'card').reduce((s, c) => s + c.price * c.quantity, 0)
+   640→
+   641→  return (
+   642→    <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+   643→      {/* Pizarra */}
+   644→      <div>
+   645→        <BookmarkTabs
+   646→          active={activeTag}
+   647→          onChange={setActiveTag}
+   648→          tabs={tags.map((t) => ({ id: t, label: t === 'todos' ? 'Todos' : t }))}
+   649→        />
+   650→        <div className="relative mb-4">
+   651→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+   652→          <input
+   653→            type="search"
+   654→            value={search}
+   655→            onChange={(e) => setSearch(e.target.value)}
+   656→            placeholder="Buscar producto…"
+   657→            className="input-wellness pl-9 pr-9"
+   658→          />
+   659→          {search && (
+   660→            <button
+   661→              onClick={() => setSearch('')}
+   662→              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+   663→              aria-label="Limpiar"
+   664→            >
+   665→              <X className="w-3.5 h-3.5" />
+   666→            </button>
+   667→          )}
+   668→        </div>
+   669→
+   670→        {loading ? (
+   671→          <LoadingBlock label="Cargando productos…" />
+   672→        ) : filtered.length === 0 ? (
+   673→          <EmptyState icon={<PackageIcon className="w-6 h-6" />} title="Sin productos" />
+   674→        ) : (
+   675→          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+   676→            <SortableContext
+   677→              items={!search && activeTag === 'todos' ? filtered.map((p) => p.id) : []}
+   678→              strategy={verticalListSortingStrategy}
+   679→            >
+   680→              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+   681→                {filtered.map((p) => {
+   682→                  const productProtocol = protocols.find((pr) => pr.productId === p.id)
+   683→                  return (
+   684→                    <ProductCard
+   685→                      key={p.id}
+   686→                      product={p}
+   687→                      draggable={!search && activeTag === 'todos'}
+   688→                      hasProtocol={!!productProtocol}
+   689→                      onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
+   690→                      onClick={() => setPaymentModal(p)}
+   691→                    />
+   692→                  )
+   693→                })}
+   694→              </div>
+   695→            </SortableContext>
+   696→          </DndContext>
+   697→        )}
+   698→      </div>
+   699→
+   700→      {/* Comandas panel */}
+   701→      <div className="lg:sticky lg:top-20 self-start">
+   702→        <Card>
+   703→          <div className="flex items-center justify-between mb-3">
+   704→            <h3 className="font-serif text-lg">Comandas</h3>
+   705→            <Badge variant="muted">{pending.length} pendientes</Badge>
+   706→          </div>
+   707→          {comandas.length === 0 ? (
+   708→            <p className="text-sm text-muted-foreground py-6 text-center">
+   709→              Haz click en un producto para registrar una venta.
+   710→            </p>
+   711→          ) : (
+   712→            <ul className="space-y-2 max-h-[420px] overflow-y-auto custom-scroll pr-1">
+   713→              {pending
+   714→                .sort((a, b) => a.priority - b.priority)
+   715→                .map((c) => (
+   716→                  <ComandaItem
+   717→                    key={c.id}
+   718→                    comanda={c}
+   719→                    onUp={() => movePriority(c.id, -1)}
+   720→                    onDown={() => movePriority(c.id, 1)}
+   721→                    onDone={() => markDone(c.id)}
+   722→                    onRemove={() => removeItem(c.id)}
+   723→                  />
+   724→                ))}
+   725→              {delivered.length > 0 && (
+   726→                <li className="pt-2 mt-2 border-t border-border">
+   727→                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+   728→                    Entregadas hoy ({delivered.length})
+   729→                  </p>
+   730→                  <div className="space-y-1">
+   731→                    {delivered.slice(0, 20).map((c) => (
+   732→                      <div key={c.id} className="flex items-center justify-between text-xs py-1 opacity-70">
+   733→                        <span className="truncate">{c.productName}</span>
+   734→                        <span className="text-sage">{eur(c.price * c.quantity)}</span>
+   735→                      </div>
+   736→                    ))}
+   737→                  </div>
+   738→                </li>
+   739→              )}
+   740→            </ul>
+   741→          )}
+   742→          <div className="mt-4 pt-4 border-t border-border space-y-1.5 text-sm">
+   743→            <Row label="Total vendido" value={eur(total)} bold />
+   744→            <Row label="Efectivo" value={eur(cashTotal)} icon={<Banknote className="w-3.5 h-3.5" />} />
+   745→            <Row label="Tarjeta" value={eur(cardTotal)} icon={<CreditCard className="w-3.5 h-3.5" />} />
+   746→          </div>
+   747→        </Card>
+   748→      </div>
+   749→
+   750→      {paymentModal && (
+   751→        <PaymentModal
+   752→          product={paymentModal}
+   753→          onClose={() => setPaymentModal(null)}
+   754→          onSelect={(m) => addSale(paymentModal, m)}
+   755→        />
+   756→      )}
+   757→      {protocolModal && (
+   758→        <ProtocolModal protocol={protocolModal} onClose={() => setProtocolModal(null)} />
+   759→      )}
+   760→    </div>
+   761→  )
+   762→}
+   763→

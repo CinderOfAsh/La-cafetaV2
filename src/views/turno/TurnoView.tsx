@@ -3,12 +3,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AppHeader } from '@/components/AppHeader'
 import { Card, Badge, LoadingBlock } from '@/components/shared'
+import { ProtocolChecklist } from '@/components/ProtocolChecklist'
 import { useAppStore } from '@/lib/store'
-import { get } from '@/lib/api'
+import { get, post } from '@/lib/api'
 import { todayStr } from '@/lib/format'
 import { LivePizarra } from '@/components/pos'
-import { Sunrise, Sunset } from 'lucide-react'
+import { Sunrise, Sunset, Lock, CheckCircle2, LogOut } from 'lucide-react'
+import { toast } from 'sonner'
 import type { Shift, ShiftAssignment, Protocol } from '@/lib/types'
+
+type TurnoStage = 'apertura' | 'ventas' | 'cierre' | 'finalizado'
+
+const STORAGE_KEY_PREFIX = 'lacafeta:turno:'
 
 export function TurnoView() {
   const setView = useAppStore((s) => s.setView)
@@ -17,11 +23,13 @@ export function TurnoView() {
   const [shift, setShift] = useState<Shift | null>(null)
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [loading, setLoading] = useState(true)
+  const [stage, setStage] = useState<TurnoStage>('apertura')
+  const date = todayStr()
+  const storageKey = `${STORAGE_KEY_PREFIX}${user.id}:${date}`
 
   useEffect(() => {
     ;(async () => {
       try {
-        const date = todayStr()
         const assignments = await get<ShiftAssignment[]>(
           `/api/shift-assignments?userId=${user.id}&date=${date}`
         )
@@ -37,7 +45,32 @@ export function TurnoView() {
         setLoading(false)
       }
     })()
-  }, [user.id])
+  }, [user.id, date])
+
+  // Restore stage from localStorage
+  useEffect(() => {
+    if (loading) return
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) {
+        const parsed = JSON.parse(saved) as { stage: TurnoStage }
+        if (parsed.stage && ['apertura', 'ventas', 'cierre', 'finalizado'].includes(parsed.stage)) {
+          setStage(parsed.stage)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [storageKey, loading])
+
+  function persistStage(s: TurnoStage) {
+    setStage(s)
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ stage: s, ts: Date.now() }))
+    } catch {
+      // ignore
+    }
+  }
 
   const openingSteps = useMemo(() => {
     if (!shift) return [] as string[]
@@ -59,18 +92,62 @@ export function TurnoView() {
     return [] as string[]
   }, [shift])
 
+  async function completeApertura() {
+    // Optionally mark protocol completion in DB
+    try {
+      const aperturaProtocol = protocols.find((p) => p.type === 'APERTURA')
+      if (aperturaProtocol) {
+        await post(`/api/protocols/${aperturaProtocol.id}/complete`, {
+          completedBy: user.id,
+          date,
+        })
+      }
+    } catch {
+      // non-blocking
+    }
+    toast.success('Turno iniciado · ¡a vender!')
+    persistStage('ventas')
+  }
+
+  async function completeCierre() {
+    try {
+      const cierreProtocol = protocols.find((p) => p.type === 'CIERRE')
+      if (cierreProtocol) {
+        await post(`/api/protocols/${cierreProtocol.id}/complete`, {
+          completedBy: user.id,
+          date,
+        })
+      }
+    } catch {
+      // non-blocking
+    }
+    toast.success('Turno finalizado correctamente')
+    persistStage('finalizado')
+  }
+
+  const hasShift = !!shift
+  // If no shift assigned today, skip protocols and go straight to ventas stage
+  const effectiveStage = !hasShift && stage === 'apertura' ? 'ventas' : stage
+  const hasOpeningProtocol = hasShift && openingSteps.length > 0
+  const hasClosingProtocol = hasShift && closingSteps.length > 0
+
+  // Determine which overlay to show
+  const showAperturaOverlay = hasOpeningProtocol && effectiveStage === 'apertura'
+  const showCierreOverlay = hasClosingProtocol && effectiveStage === 'cierre'
+  const showFinalizado = effectiveStage === 'finalizado'
+
   return (
     <>
       <AppHeader title="Mi Turno" onBack={() => setView('hub-empleado')} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {loading ? (
           <Card><LoadingBlock label="Cargando turno…" /></Card>
-        ) : shift ? (
+        ) : hasShift ? (
           <div className="card-wellness p-5 mb-6 border-l-4 border-l-[color:var(--sage)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-sage font-semibold mb-1">
-                  Turno en curso
+                  {showFinalizado ? 'Turno finalizado' : effectiveStage === 'ventas' ? 'Turno en curso' : 'Turno pendiente de apertura'}
                 </p>
                 <h2 className="font-serif text-2xl text-foreground">
                   Bienvenido, {user.name.split(' ')[0]}
@@ -79,7 +156,17 @@ export function TurnoView() {
                   {shift.name} · {shift.startTime}–{shift.endTime}
                 </p>
               </div>
-              <Badge variant="sage">{today?.role}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="sage">{today?.role}</Badge>
+                {effectiveStage === 'ventas' && hasClosingProtocol && (
+                  <button
+                    className="btn-outline text-sm"
+                    onClick={() => persistStage('cierre')}
+                  >
+                    <Sunset className="w-4 h-4" /> Finalizar turno
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : (
@@ -90,9 +177,62 @@ export function TurnoView() {
           </div>
         )}
 
-        {/* Protocols */}
-        {(openingSteps.length > 0 || closingSteps.length > 0) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Finalizado screen */}
+        {showFinalizado ? (
+          <Card className="text-center py-12">
+            <div className="w-16 h-16 mx-auto rounded-full bg-[rgba(127,166,155,0.15)] text-sage flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <h3 className="font-serif text-2xl mb-2">Turno finalizado</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+              Has completado todos los protocolos de cierre. El turno de hoy queda registrado.
+              Puedes volver al hub cuando quieras.
+            </p>
+            <button className="btn-sage" onClick={() => setView('hub-empleado')}>
+              <LogOut className="w-4 h-4" /> Volver al hub
+            </button>
+          </Card>
+        ) : showAperturaOverlay ? (
+          <>
+            {/* Blocker card explaining why POS is hidden */}
+            <Card className="mb-6 border-l-4 border-l-[color:var(--warn)]">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-[color:var(--warn)] shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Panel de ventas bloqueado</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Completa el protocolo de apertura para desbloquear el punto de venta.
+                  </p>
+                </div>
+              </div>
+            </Card>
+            <ProtocolChecklist
+              type="apertura"
+              steps={openingSteps}
+              onComplete={completeApertura}
+              forceOpen
+            />
+          </>
+        ) : showCierreOverlay ? (
+          <ProtocolChecklist
+            type="cierre"
+            steps={closingSteps}
+            onComplete={completeCierre}
+            onCancel={() => persistStage('ventas')}
+            forceOpen={false}
+          />
+        ) : (
+          <>
+            {/* POS panel */}
+            <LivePizarra employeeId={user.id} />
+            {/* sr-only summary to keep protocols import meaningful */}
+            <span className="sr-only">{protocols.length} protocolos cargados</span>
+          </>
+        )}
+
+        {/* Static protocol reference (only when not in overlay) */}
+        {!showAperturaOverlay && !showCierreOverlay && !showFinalizado && (openingSteps.length > 0 || closingSteps.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
             {openingSteps.length > 0 && (
               <Card>
                 <div className="flex items-center gap-2 mb-3">
@@ -100,6 +240,9 @@ export function TurnoView() {
                     <Sunrise className="w-4 h-4" />
                   </div>
                   <h3 className="font-serif text-lg">Protocolo de apertura</h3>
+                  {effectiveStage !== 'apertura' && (
+                    <Badge variant="sage" className="ml-auto">completado</Badge>
+                  )}
                 </div>
                 <ol className="space-y-2.5">
                   {openingSteps.map((s, i) => (
@@ -135,12 +278,6 @@ export function TurnoView() {
             )}
           </div>
         )}
-
-        {/* POS */}
-        <LivePizarra employeeId={user.id} />
-
-        {/* Unused protocol list ref to keep import meaningful */}
-        <span className="sr-only">{protocols.length} protocolos cargados</span>
       </main>
     </>
   )

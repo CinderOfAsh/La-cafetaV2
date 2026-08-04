@@ -155,138 +155,169 @@
 }
 
 /* ==================== Wellness design system ==================== */
+/* Component classes live in @layer components so Tailwind utilities (pl-10, pr-10, etc.) can override them. */
 
-/* Cards */
-.card-wellness {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(46, 50, 49, 0.04), 0 1px 2px rgba(46, 50, 49, 0.02);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.card-wellness:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(46, 50, 49, 0.08), 0 2px 6px rgba(46, 50, 49, 0.04);
-}
+@layer components {
+  /* Cards */
+  .card-wellness {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(46, 50, 49, 0.04), 0 1px 2px rgba(46, 50, 49, 0.02);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .card-wellness:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(46, 50, 49, 0.08), 0 2px 6px rgba(46, 50, 49, 0.04);
+  }
 
-/* Botones primarios — pill sage */
-.btn-sage {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--sage);
-  color: var(--sage-foreground);
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 14px;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.25s ease;
-}
-.btn-sage:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--sage) 88%, black);
-  transform: translateY(-1px);
-}
-.btn-sage:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  /* Botones primarios — pill sage */
+  .btn-sage {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--sage);
+    color: var(--sage-foreground);
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.25s ease;
+  }
+  .btn-sage:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--sage) 88%, black);
+    transform: translateY(-1px);
+  }
+  .btn-sage:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 
-.btn-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: transparent;
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.btn-outline:hover {
-  background: var(--accent);
-  border-color: var(--sage);
-}
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: transparent;
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-outline:hover {
+    background: var(--accent);
+    border-color: var(--sage);
+  }
 
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: transparent;
-  color: var(--foreground);
-  border: none;
-  border-radius: 999px;
-  font-weight: 500;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.btn-ghost:hover {
-  background: var(--accent);
-}
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: var(--foreground);
+    border: none;
+    border-radius: 999px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .btn-ghost:hover {
+    background: var(--accent);
+  }
 
-/* Inputs */
-.input-wellness {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  background: var(--background);
-  border: 1px solid var(--input);
-  border-radius: 10px;
-  font-size: 14px;
-  color: var(--foreground);
-  outline: none;
-  transition: all 0.2s ease;
-}
-.input-wellness::placeholder {
-  color: var(--muted-foreground);
-  opacity: 0.7;
-}
-.input-wellness:focus {
-  border-color: var(--sage);
-  box-shadow: 0 0 0 3px var(--sage-light);
-}
+  /* Inputs */
+  .input-wellness {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    background: var(--background);
+    border: 1px solid var(--input);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--foreground);
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  .input-wellness::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.7;
+  }
+  .input-wellness:focus {
+    border-color: var(--sage);
+    box-shadow: 0 0 0 3px var(--sage-light);
+  }
 
-/* Tabs tipo bookmark */
-.bookmark-tabs {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 1.5rem;
-  padding-left: 0.5rem;
-}
-.bookmark-tab {
-  padding: 0.625rem 1.25rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  font-weight: 500;
-  font-size: 14px;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  position: relative;
-  top: 1px;
-  transition: all 0.2s ease;
-}
-.bookmark-tab:hover {
-  color: var(--foreground);
-  background: var(--accent);
-}
-.bookmark-tab.active {
-  background: var(--card);
-  border-color: var(--border);
-  color: var(--sage);
-  font-weight: 600;
+  /* Tabs tipo bookmark */
+  .bookmark-tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+    padding-left: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .bookmark-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .bookmark-tab {
+    padding: 0.625rem 1.25rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    position: relative;
+    top: 1px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .bookmark-tab:hover {
+    color: var(--foreground);
+    background: var(--accent);
+  }
+  .bookmark-tab.active {
+    background: var(--card);
+    border-color: var(--border);
+    color: var(--sage);
+    font-weight: 600;
+  }
+
+  /* Theme toggle — bigger, with subtle background so it's visible in light mode */
+  .theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .theme-toggle-btn:hover {
+    background: var(--sage-light);
+    border-color: var(--sage);
+    color: var(--sage);
+    transform: scale(1.05);
+  }
 }
 
 /* Animaciones reveal */

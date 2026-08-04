@@ -168,18 +168,18 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
           tabs={tags.map((t) => ({ id: t, label: t === 'todos' ? 'Todos' : t }))}
         />
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar producto…"
-            className="input-wellness pl-9 pr-9"
+            className="input-wellness pl-10 pr-10"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground z-10"
               aria-label="Limpiar"
             >
               <X className="w-3.5 h-3.5" />
@@ -292,11 +292,17 @@ function ProductCard({
     id: product.id,
     disabled: !draggable,
   })
+  const [imgError, setImgError] = useState(false)
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   }
+
+  // Normalize imageUrl: accept absolute URLs, relative paths, or data URIs
+  const imgUrl = product.imageUrl?.trim() || ''
+  const showImg = imgUrl && !imgError
+
   return (
     <div
       ref={setNodeRef}
@@ -306,13 +312,27 @@ function ProductCard({
     >
       <div
         {...listeners}
-        className="aspect-square rounded-lg bg-muted flex items-center justify-center overflow-hidden"
-        onClick={onClick}
+        className="aspect-square rounded-lg bg-muted flex items-center justify-center overflow-hidden relative"
+        onClick={(e) => {
+          // Only trigger click if not dragging (clicks during drag are prevented by activationConstraint)
+          onClick()
+        }}
       >
-        {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+        {showImg ? (
+          <img
+            src={imgUrl}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            onError={() => setImgError(true)}
+            draggable={false}
+          />
         ) : (
-          <PackageIcon className="w-8 h-8 text-muted-foreground" />
+          <div className="flex flex-col items-center gap-1 text-muted-foreground">
+            <PackageIcon className="w-8 h-8" />
+            {imgError && <span className="text-[10px]">sin imagen</span>}
+          </div>
         )}
       </div>
       <div className="flex items-start justify-between gap-1">
@@ -613,19 +633,31 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
   }
 
   async function movePriority(itemId: string, dir: -1 | 1) {
-    const pending = comandas.filter((c) => c.status === 'PENDING').sort((a, b) => a.priority - b.priority)
+    // Sort pending items by (priority asc, createdAt asc) for a stable order across sales
+    const pending = comandas
+      .filter((c) => c.status === 'PENDING')
+      .slice()
+      .sort((a, b) => {
+        if (a.priority !== b.priority) return a.priority - b.priority
+        // fallback: older first (createdAt string ISO compares lexicographically)
+        return (a.createdAt || '').localeCompare(b.createdAt || '')
+      })
     const idx = pending.findIndex((c) => c.id === itemId)
     if (idx === -1) return
     const newIdx = idx + dir
     if (newIdx < 0 || newIdx >= pending.length) return
-    const a = pending[idx]
-    const b = pending[newIdx]
-    // swap priorities via two PUTs
+    // Swap positions in the array
+    const reordered = [...pending]
+    ;[reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]]
+    // Reassign priorities 0..n-1 sequentially so order is globally stable
     try {
-      await Promise.all([
-        put(`/api/sale-items/${a.id}`, { priority: b.priority }),
-        put(`/api/sale-items/${b.id}`, { priority: a.priority }),
-      ])
+      await Promise.all(
+        reordered.map((item, i) =>
+          item.priority === i
+            ? Promise.resolve()
+            : put(`/api/sale-items/${item.id}`, { priority: i })
+        )
+      )
       loadComandas()
     } catch {
       toast.error('No se pudo reordenar')
@@ -648,18 +680,18 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
           tabs={tags.map((t) => ({ id: t, label: t === 'todos' ? 'Todos' : t }))}
         />
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar producto…"
-            className="input-wellness pl-9 pr-9"
+            className="input-wellness pl-10 pr-10"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground z-10"
               aria-label="Limpiar"
             >
               <X className="w-3.5 h-3.5" />
@@ -711,7 +743,11 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
           ) : (
             <ul className="space-y-2 max-h-[420px] overflow-y-auto custom-scroll pr-1">
               {pending
-                .sort((a, b) => a.priority - b.priority)
+                .slice()
+                .sort((a, b) => {
+                  if (a.priority !== b.priority) return a.priority - b.priority
+                  return (a.createdAt || '').localeCompare(b.createdAt || '')
+                })
                 .map((c) => (
                   <ComandaItem
                     key={c.id}

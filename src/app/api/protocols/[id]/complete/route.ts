@@ -11,21 +11,27 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const user = await getCurrentUser()
     const completedBy = body?.completedBy || user?.name || null
 
-    const completion = await db.protocolCompletion.upsert({
-      where: {
-        protocolId_date: { protocolId: id, date },
-      },
-      update: {
-        completed: true,
-        completedBy,
-      },
-      create: {
-        protocolId: id,
-        date,
-        completed: true,
-        completedBy,
-      },
+    // Find existing completion for this protocol + date
+    const existing = await db.protocolCompletion.findFirst({
+      where: { protocolId: id, date },
     })
+
+    let completion
+    if (existing) {
+      completion = await db.protocolCompletion.update({
+        where: { id: existing.id },
+        data: { completed: true, completedBy },
+      })
+    } else {
+      completion = await db.protocolCompletion.create({
+        data: {
+          protocolId: id,
+          date,
+          completed: true,
+          completedBy,
+        },
+      })
+    }
 
     return NextResponse.json({ data: completion })
   } catch (err: any) {
