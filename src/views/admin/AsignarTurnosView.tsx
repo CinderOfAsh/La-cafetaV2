@@ -256,11 +256,34 @@ function DayDialog({
   const [shiftId, setShiftId] = useState(shifts[0]?.id ?? '')
   const [role, setRole] = useState('CAMARERO')
   const [saving, setSaving] = useState(false)
-  const full = existing.length >= 2
+  // Fetch ALL assignments for this date (not just the selected user's) so we can validate role uniqueness
+  const [allForDate, setAllForDate] = useState<ShiftAssignment[]>(existing)
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const all = await get<ShiftAssignment[]>(`/api/shift-assignments?date=${date}`)
+        setAllForDate(all)
+      } catch {
+        setAllForDate(existing)
+      }
+    })()
+  }, [date, existing])
+
+  const full = allForDate.length >= 2
+
+  // Find which roles are already taken for the selected shift+date (across ALL users)
+  const existingForShift = allForDate.filter((a) => a.shiftId === shiftId)
+  const takenRoles = new Set(existingForShift.map((a) => a.role))
+  const roleTaken = takenRoles.has(role)
 
   async function assign() {
     if (!shiftId) {
       toast.error('Selecciona un turno')
+      return
+    }
+    if (roleTaken) {
+      toast.error(`Ya hay un ${role.toLowerCase()} asignado a este turno. Elige el otro rol.`)
       return
     }
     setSaving(true)
@@ -294,7 +317,7 @@ function DayDialog({
       footer={
         <>
           <button className="btn-ghost text-sm" onClick={onClose}>Cerrar</button>
-          <button className="btn-sage text-sm" onClick={assign} disabled={saving || full || !shiftId}>
+          <button className="btn-sage text-sm" onClick={assign} disabled={saving || full || !shiftId || roleTaken}>
             <Plus className="w-4 h-4" /> {saving ? 'Asignando…' : 'Asignar'}
           </button>
         </>
@@ -306,19 +329,23 @@ function DayDialog({
         </div>
       )}
 
-      {/* Existing */}
+      {/* Existing — show ALL assignments for this date, not just the selected user's */}
       <div className="mb-5">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Asignaciones actuales</p>
-        {existing.length === 0 ? (
+        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+          Asignaciones del día ({allForDate.length}/2)
+        </p>
+        {allForDate.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nadie asignado todavía.</p>
         ) : (
           <div className="space-y-2">
-            {existing.map((a) => (
+            {allForDate.map((a) => (
               <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-sage" />
                   <div>
-                    <p className="text-sm font-medium">{a.shift?.name}</p>
+                    <p className="text-sm font-medium">
+                      {a.shift?.name} · <span className="text-muted-foreground">{a.user?.name}</span>
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {a.shift?.startTime}–{a.shift?.endTime} · <Badge variant="muted">{a.role}</Badge>
                     </p>
@@ -342,21 +369,33 @@ function DayDialog({
         <div>
           <label className="text-sm font-medium block mb-1.5">Turno</label>
           <select className="input-wellness" value={shiftId} onChange={(e) => setShiftId(e.target.value)} disabled={full}>
-            {shifts.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.startTime}–{s.endTime})
-              </option>
-            ))}
+            {shifts.map((s) => {
+              const count = allForDate.filter((a) => a.shiftId === s.id).length
+              return (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.startTime}–{s.endTime}){count > 0 ? ` · ${count}/2 ocupado` : ''}
+                </option>
+              )
+            })}
           </select>
         </div>
         <div>
           <label className="text-sm font-medium block mb-1.5">Rol</label>
           <select className="input-wellness" value={role} onChange={(e) => setRole(e.target.value)} disabled={full}>
-            <option value="CAMARERO">CAMARERO</option>
-            <option value="COCINERO">COCINERO</option>
+            <option value="CAMARERO" disabled={takenRoles.has('CAMARERO')}>
+              CAMARERO {takenRoles.has('CAMARERO') ? '(ya asignado)' : ''}
+            </option>
+            <option value="COCINERO" disabled={takenRoles.has('COCINERO')}>
+              COCINERO {takenRoles.has('COCINERO') ? '(ya asignado)' : ''}
+            </option>
           </select>
         </div>
       </div>
+      {roleTaken && (
+        <div className="mt-3 p-3 rounded-lg bg-[rgba(199,123,92,0.10)] text-[color:var(--warn)] text-sm">
+          Ya hay un <strong>{role.toLowerCase()}</strong> asignado a este turno. Cada turno debe tener 1 cocinero y 1 camarero.
+        </div>
+      )}
     </ModalShell>
   )
 }

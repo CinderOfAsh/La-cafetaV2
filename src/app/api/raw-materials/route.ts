@@ -1,10 +1,23 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
+const SHOPPING_LIST_TTL_MS = 24 * 60 * 60 * 1000 // 24 horas
+
 function parseMaterial(m: any) {
+  const critical = m.stock < m.minStock
+  const lastPurchasedAt = m.lastPurchasedAt ? new Date(m.lastPurchasedAt).getTime() : 0
+  const now = Date.now()
+  const recentlyPurchased = lastPurchasedAt > 0 && (now - lastPurchasedAt) < SHOPPING_LIST_TTL_MS
+  // In shopping list if: critical (stock < minStock) OR recently purchased (still within 24h tachado window)
+  const inShoppingList = critical || recentlyPurchased
+  // Tachado = bought within last 24h
+  const shoppingTachado = recentlyPurchased
   return {
     ...m,
-    critical: m.stock < m.minStock,
+    critical,
+    inShoppingList,
+    shoppingTachado,
+    lastPurchasedAt: m.lastPurchasedAt,
   }
 }
 

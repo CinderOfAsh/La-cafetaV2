@@ -36,7 +36,11 @@ export interface RawMaterial {
   unit: string
   stock: number
   minStock: number
+  lastPurchasedAt?: string | null
   critical?: boolean
+  // Lista de la compra: si está tachado (comprado hace <24h)
+  inShoppingList?: boolean
+  shoppingTachado?: boolean
 }
 
 export interface ProductRecipe {
@@ -53,6 +57,9 @@ export interface Purchase {
   supplier?: string | null
   notes?: string | null
   totalAmount: number
+  invoiceUrl?: string | null
+  conciliatedAt?: string | null
+  source?: string
   items?: PurchaseItem[]
 }
 

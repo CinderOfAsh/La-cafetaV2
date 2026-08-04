@@ -338,3 +338,63 @@ Stage Summary:
 - Plantilla real (Bullerre + 16 empleados) cargada
 - Turnos reales (8:45-13, 13-17, L-V) sin asignaciones para test UX
 - BD limpia de productos para que el usuario testee el alta uno a uno
+
+---
+Task ID: 7
+Agent: Super Z (main)
+Task: Refactor Lista de la Compra + Compras, crear materias inline, validar roles, calendario empleado con responsables, reabrir turno
+
+Work Log:
+- Schema: añadido lastPurchasedAt a RawMaterial, invoiceUrl + conciliatedAt + source a Purchase
+- HubAdmin: eliminada card "Materias Primas" duplicada (5 cards ahora)
+- ProductosView: 4 tabs (Productos | Materias Primas | Lista de la Compra | Compras)
+- Lista de la Compra (nueva):
+  - Auto-generada con materias primas en stock < minStock (críticas)
+  - Cada item tiene inputs de cantidad comprada y precio
+  - Al rellenar ambos y clickar "Comprar": crea Purchase con source="shopping-list", incrementa stock, setea lastPurchasedAt
+  - Item se muestra tachado (line-through + badge "comprado") durante 24h
+  - Después de 24h desaparece automáticamente
+  - Si sigue crítico después de 24h, reaparece como no-tachado
+- Compras (nueva):
+  - Historial de todas las compras con fecha, origen (Lista compra / Manual), proveedor, items, total
+  - Estado conciliado/no conciliado (badge)
+  - Filtros: Todas / No conciliado / Conciliado
+  - Botón "Subir factura" → POST /api/purchases/[id]/conciliate (multipart) → setea invoiceUrl + conciliatedAt
+  - Botón "Ver factura" (link al PDF subido) si está conciliado
+  - KPIs: Total gastado, Conciliado, Pendiente
+  - Registro manual de compras también disponible
+- ProductDialog: botón "Crear materia" en el editor de recetas que abre un formulario inline (nombre, unidad, stock, minStock). Al crear, se añade automáticamente a la receta.
+- AsignarTurnos:
+  - API valida role uniqueness: no 2 cocineros ni 2 camareros en mismo shift+date
+  - DayDialog ahora carga TODAS las asignaciones del día (no solo las del usuario seleccionado)
+  - Select de rol deshabilita opciones ya tomadas con texto "(ya asignado)"
+  - Aviso visual cuando el rol está tomado
+  - Select de turno muestra "X/2 ocupado"
+  - Lista de asignaciones del día muestra nombre de cada persona + rol
+- CalendarioView empleado:
+  - Ahora carga TODAS las asignaciones (no solo las del usuario)
+  - Vista mes: cada celda agrupa por turno y muestra "Mañana: Aitana (cam), Angel (coc)"
+  - Los turnos propios son clickeables (para swap), los de otros no
+  - Vista día/semana: tarjetas agrupadas por turno con lista de responsables y badges de rol
+- TurnoView: botón "Reabrir turno" en pantalla de finalizado que vuelve a stage=ventas, permitiendo ventas adicionales
+- Verificación Agent Browser:
+  - Hub admin con 5 cards (sin Materias Primas) ✓
+  - 4 tabs en Productos ✓
+  - Lista de la Compra muestra "Barra de pan" crítico, inputs, botón Comprar ✓
+  - Comprar → stock actualizado (3→8), item tachado con badge "comprado" ✓
+  - Compras muestra la compra con badge "No conciliado" y botón "Subir factura" ✓
+  - Conciliación vía API → estado "Conciliado" + botón "Ver factura" ✓
+  - ProductDialog con botón "Crear materia" → form inline → "Tomate" creada y añadida a receta ✓
+  - AsignarTurnos: día 11 con Aitana (camarera) → select CAMARERO deshabilitado con "(ya asignado)" → Angel asignado como COCINERO ✓
+  - Calendario empleado: celdas muestran "Mañana: Aitana (cam), Angel (coc)" ✓
+  - TurnoView: apertura → ventas → cierre → finalizado → "Reabrir turno" → vuelve a ventas ✓
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Lista de la Compra automática con checklist y tachado 24h funcional
+- Compras con conciliación por factura subida funcional
+- Creación inline de materias primas en el modal de producto
+- Validación de roles únicos por turno+fecha (backend + frontend)
+- Calendario del empleado muestra todos los turnos con responsables
+- Reabrir turno cerrado funcional
+- App lista para test del usuario

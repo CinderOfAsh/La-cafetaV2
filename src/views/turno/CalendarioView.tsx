@@ -38,14 +38,15 @@ export function CalendarioView() {
   useEffect(() => {
     ;(async () => {
       try {
+        // Fetch ALL assignments (not just mine) so the calendar shows who's working each shift
         const [as, us] = await Promise.all([
-          get<ShiftAssignment[]>(`/api/shift-assignments?userId=${user.id}`),
+          get<ShiftAssignment[]>(`/api/shift-assignments`),
           get<DbUser[]>('/api/users'),
         ])
         setAssignments(as)
         setUsers(us.filter((u) => u.id !== user.id && u.isActive))
       } catch {
-        toast.error('No se pudieron cargar tus turnos')
+        toast.error('No se pudieron cargar los turnos')
       } finally {
         setLoading(false)
       }
@@ -185,25 +186,54 @@ export function CalendarioView() {
                   {monthCells.map((c, idx) => {
                     if (!c.date) return <div key={idx} className="aspect-square sm:aspect-[4/3]" />
                     const dayAssignments = visibleAssignments.filter((a) => a.date === c.date)
+                    // Group by shift to show "Mañana: Aitana (cocinero), Jose G (camarero)"
+                    const byShift = new Map<string, ShiftAssignment[]>()
+                    for (const a of dayAssignments) {
+                      const key = a.shiftId
+                      const arr = byShift.get(key) || []
+                      arr.push(a)
+                      byShift.set(key, arr)
+                    }
                     const isToday = c.date === todayStr()
                     return (
                       <div
                         key={idx}
-                        className={`aspect-square sm:aspect-[4/3] rounded-lg border p-1.5 sm:p-2 text-left flex flex-col gap-1 transition-colors bg-card ${
+                        className={`aspect-square sm:aspect-[4/3] rounded-lg border p-1 sm:p-1.5 text-left flex flex-col gap-0.5 transition-colors bg-card overflow-hidden ${
                           isToday ? 'border-[color:var(--sage)]' : 'border-border'
                         }`}
                       >
-                        <div className="text-xs font-medium">{c.day}</div>
+                        <div className="text-[10px] sm:text-xs font-medium">{c.day}</div>
                         <div className="space-y-0.5 overflow-hidden">
-                          {dayAssignments.map((a) => (
-                            <button
-                              key={a.id}
-                              onClick={() => setSelected(a)}
-                              className="block w-full text-left text-[10px] leading-tight px-1.5 py-0.5 rounded bg-[rgba(127,166,155,0.15)] text-sage hover:bg-[rgba(127,166,155,0.25)] truncate"
-                            >
-                              {a.shift?.name}
-                            </button>
-                          ))}
+                          {Array.from(byShift.entries()).map(([shiftId, arr]) => {
+                            const shift = arr[0]?.shift
+                            const isMine = arr.some((a) => a.userId === user.id)
+                            return (
+                              <button
+                                key={shiftId}
+                                onClick={() => {
+                                  // If I have an assignment in this shift, select mine (for swap)
+                                  const mine = arr.find((a) => a.userId === user.id)
+                                  if (mine) setSelected(mine)
+                                }}
+                                disabled={!arr.some((a) => a.userId === user.id)}
+                                className={`block w-full text-left text-[9px] sm:text-[10px] leading-tight px-1 py-0.5 rounded truncate ${
+                                  isMine
+                                    ? 'bg-[rgba(127,166,155,0.20)] text-sage hover:bg-[rgba(127,166,155,0.30)] cursor-pointer'
+                                    : 'bg-muted/60 text-muted-foreground cursor-default'
+                                }`}
+                                title={arr.map((a) => `${a.user?.name} (${a.role})`).join(', ')}
+                              >
+                                <span className="font-medium">{shift?.name}:</span>{' '}
+                                {arr.map((a, i) => (
+                                  <span key={a.id}>
+                                    {i > 0 && ', '}
+                                    {a.user?.name?.split(' ')[0]}{' '}
+                                    <span className="opacity-70">({a.role === 'COCINERO' ? 'coc' : 'cam'})</span>
+                                  </span>
+                                ))}
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
                     )
@@ -217,15 +247,30 @@ export function CalendarioView() {
                     <EmptyState
                       icon={<CalendarIcon className="w-6 h-6" />}
                       title="Sin turnos"
-                      description="No tienes turnos asignados en este periodo."
+                      description="No hay turnos asignados en este periodo."
                     />
                   </Card>
                 ) : (
-                  visibleAssignments
-                    .sort((a, b) => a.date.localeCompare(b.date))
-                    .map((a) => (
-                      <AssignmentCard key={a.id} a={a} onClick={() => setSelected(a)} />
-                    ))
+                  // Group by shift+date so we show a card per shift with all its people
+                  (() => {
+                    const groups = new Map<string, ShiftAssignment[]>()
+                    for (const a of visibleAssignments) {
+                      const key = `${a.date}_${a.shiftId}`
+                      const arr = groups.get(key) || []
+                      arr.push(a)
+                      groups.set(key, arr)
+                    }
+                    return Array.from(groups.entries())
+                      .sort(([ka], [kb]) => ka.localeCompare(kb))
+                      .map(([key, arr]) => (
+                        <ShiftGroupCard
+                          key={key}
+                          assignments={arr}
+                          currentUserId={user.id}
+                          onClick={(a) => setSelected(a)}
+                        />
+                      ))
+                  })()
                 )}
               </div>
             )}
@@ -249,29 +294,67 @@ export function CalendarioView() {
   )
 }
 
-function AssignmentCard({ a, onClick }: { a: ShiftAssignment; onClick: () => void }) {
+function ShiftGroupCard({
+  assignments,
+  currentUserId,
+  onClick,
+}: {
+  assignments: ShiftAssignment[]
+  currentUserId: string
+  onClick: (a: ShiftAssignment) => void
+}) {
+  const a = assignments[0]
+  const shift = a.shift
+  const mine = assignments.find((x) => x.userId === currentUserId)
+
   return (
-    <button
-      onClick={onClick}
-      className="card-wellness hover-lift p-4 text-left"
-    >
-      <div className="flex items-start justify-between mb-2">
+    <div className="card-wellness p-4">
+      <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="font-semibold text-foreground">{a.shift?.name}</p>
+          <p className="font-semibold text-foreground">{shift?.name}</p>
           <p className="text-sm text-muted-foreground">
-            {a.shift?.startTime}–{a.shift?.endTime}
+            {shift?.startTime}–{shift?.endTime}
           </p>
         </div>
-        <Badge variant="sage">{a.role}</Badge>
+        {mine && <Badge variant="sage">Tu turno</Badge>}
       </div>
-      <p className="text-xs text-muted-foreground capitalize">
+      <p className="text-xs text-muted-foreground capitalize mb-3">
         {new Date(a.date + 'T00:00:00').toLocaleDateString('es-ES', {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
         })}
       </p>
-    </button>
+      <div className="space-y-1.5">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Responsables</p>
+        {assignments.map((asg) => (
+          <button
+            key={asg.id}
+            onClick={() => asg.userId === currentUserId && onClick(asg)}
+            disabled={asg.userId !== currentUserId}
+            className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-sm ${
+              asg.userId === currentUserId
+                ? 'bg-[rgba(127,166,155,0.15)] hover:bg-[rgba(127,166,155,0.25)] cursor-pointer'
+                : 'bg-muted/40 cursor-default'
+            }`}
+          >
+            <span className="font-medium">
+              {asg.user?.name}
+              {asg.userId === currentUserId && <span className="text-sage ml-1">(tú)</span>}
+            </span>
+            <Badge variant={asg.role === 'COCINERO' ? 'sage' : 'muted'}>{asg.role}</Badge>
+          </button>
+        ))}
+      </div>
+      {mine && (
+        <button
+          onClick={() => onClick(mine)}
+          className="btn-outline text-xs w-full mt-3"
+        >
+          <ArrowLeftRight className="w-3.5 h-3.5" /> Intercambiar / ceder
+        </button>
+      )}
+    </div>
   )
 }
 

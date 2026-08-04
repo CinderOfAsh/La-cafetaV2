@@ -43,13 +43,14 @@ model Product {
 }
 
 model RawMaterial {
-  id        String           @id @default(cuid())
-  name      String
-  unit      String           @default("ud") // ud, kg, g, L, ml, plato, servilleta...
-  stock     Float            @default(0)
-  minStock  Float            @default(0)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  unit            String           @default("ud") // ud, kg, g, L, ml, plato, servilleta...
+  stock           Float            @default(0)
+  minStock        Float            @default(0)
+  lastPurchasedAt DateTime?        // cuando se compró por última vez desde Lista de la Compra
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   recipes   ProductRecipe[]
   purchases PurchaseItem[]
@@ -70,12 +71,15 @@ model ProductRecipe {
 
 // Compra / abastecimiento de materias primas
 model Purchase {
-  id          String           @id @default(cuid())
-  date        DateTime         @default(now())
-  supplier    String?          // proveedor opcional
-  notes       String?
-  totalAmount Float            @default(0) // suma calculada de los items
-  createdAt   DateTime         @default(now())
+  id            String           @id @default(cuid())
+  date          DateTime         @default(now())
+  supplier      String?          // proveedor opcional
+  notes         String?
+  totalAmount   Float            @default(0) // suma calculada de los items
+  invoiceUrl    String?          // URL del archivo de factura subido
+  conciliatedAt DateTime?        // null = no conciliado, fecha = conciliado
+  source        String           @default("manual") // "manual" (registro directo) | "shopping-list" (desde lista de la compra)
+  createdAt     DateTime         @default(now())
 
   items       PurchaseItem[]
 }

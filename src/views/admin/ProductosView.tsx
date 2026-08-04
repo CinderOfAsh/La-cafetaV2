@@ -15,6 +15,9 @@ import {
   Save,
   ShoppingCart,
   Trash,
+  Upload,
+  FileText,
+  RotateCcw,
 } from 'lucide-react'
 import { AppHeader } from '@/components/AppHeader'
 import { BookmarkTabs, Card, ModalShell, Toolbar, Badge, KVEditor } from '@/components/shared'
@@ -26,9 +29,14 @@ import { downloadCsv } from '@/lib/export-csv'
 import { eur } from '@/lib/format'
 import type { Product, RawMaterial, ProductRecipe, Purchase, PurchaseItem } from '@/lib/types'
 
+type Tab = 'productos' | 'materias' | 'lista-compra' | 'compras'
+
 export function ProductosView() {
   const setView = useAppStore((s) => s.setView)
-  const [tab, setTab] = useState<'productos' | 'materias' | 'compra'>('productos')
+  const [tab, setTab] = useState<Tab>('productos')
+  // Shared refresh key so actions in one tab can signal others
+  const [refreshKey, setRefreshKey] = useState(0)
+  const refresh = () => setRefreshKey((k) => k + 1)
 
   return (
     <>
@@ -36,16 +44,18 @@ export function ProductosView() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <BookmarkTabs
           active={tab}
-          onChange={(id) => setTab(id as 'productos' | 'materias' | 'compra')}
+          onChange={(id) => setTab(id as Tab)}
           tabs={[
             { id: 'productos', label: 'Productos' },
             { id: 'materias', label: 'Materias Primas' },
-            { id: 'compra', label: 'Lista de la Compra' },
+            { id: 'lista-compra', label: 'Lista de la Compra' },
+            { id: 'compras', label: 'Compras' },
           ]}
         />
-        {tab === 'productos' && <ProductosTab />}
-        {tab === 'materias' && <MateriasTab />}
-        {tab === 'compra' && <CompraTab />}
+        {tab === 'productos' && <ProductosTab key={`p-${refreshKey}`} />}
+        {tab === 'materias' && <MateriasTab key={`m-${refreshKey}`} />}
+        {tab === 'lista-compra' && <ListaCompraTab key={`lc-${refreshKey}`} onPurchased={refresh} />}
+        {tab === 'compras' && <ComprasTab key={`c-${refreshKey}`} onChanged={refresh} />}
       </main>
     </>
   )
@@ -258,6 +268,11 @@ function ProductDialog({
   )
   const [materials, setMaterials] = useState<RawMaterial[]>([])
   const [saving, setSaving] = useState(false)
+  // Inline new material creation
+  const [showNewMaterialRow, setShowNewMaterialRow] = useState(false)
+  const [newMaterial, setNewMaterial] = useState<{ name: string; unit: string; stock: string; minStock: string }>({
+    name: '', unit: 'ud', stock: '0', minStock: '0',
+  })
 
   useEffect(() => {
     get<RawMaterial[]>('/api/raw-materials')
@@ -267,7 +282,9 @@ function ProductDialog({
 
   function addRecipe() {
     if (materials.length === 0) {
-      toast.error('Primero crea materias primas en su pestaña')
+      // No hay materias — abrir el formulario de creación inline
+      setShowNewMaterialRow(true)
+      toast.info('No hay materias primas. Crea la primera aquí.')
       return
     }
     setRecipes([...recipes, { rawMaterialId: materials[0].id, quantity: 1 }])
@@ -438,13 +455,101 @@ function ProductDialog({
                 Define qué materias primas componen este producto y en qué cantidad. Al venderse, se descuenta automáticamente del stock.
               </p>
             </div>
-            <button type="button" className="btn-ghost text-xs" onClick={addRecipe}>
-              <Plus className="w-3.5 h-3.5" /> Añadir ingrediente
-            </button>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                className="btn-ghost text-xs"
+                onClick={() => setShowNewMaterialRow(true)}
+                title="Crear nueva materia prima"
+              >
+                <Plus className="w-3.5 h-3.5" /> Crear materia
+              </button>
+              <button type="button" className="btn-ghost text-xs" onClick={addRecipe}>
+                <Plus className="w-3.5 h-3.5" /> Añadir ingrediente
+              </button>
+            </div>
           </div>
+
+          {/* Inline new material creation */}
+          {showNewMaterialRow && (
+            <div className="mb-3 p-3 rounded-lg border border-[color:var(--sage)] bg-accent">
+              <p className="text-xs font-medium text-sage mb-2">Crear nueva materia prima</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <input
+                  className="input-wellness"
+                  placeholder="Nombre *"
+                  value={newMaterial.name}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, name: e.target.value })}
+                />
+                <input
+                  className="input-wellness"
+                  placeholder="Unidad (ud, kg, g...)"
+                  value={newMaterial.unit}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, unit: e.target.value })}
+                />
+                <input
+                  className="input-wellness"
+                  type="number"
+                  step="0.01"
+                  placeholder="Stock inicial"
+                  value={newMaterial.stock}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, stock: e.target.value })}
+                />
+                <input
+                  className="input-wellness"
+                  type="number"
+                  step="0.01"
+                  placeholder="Mínimo alerta"
+                  value={newMaterial.minStock}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, minStock: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  className="btn-sage text-xs"
+                  onClick={async () => {
+                    if (!newMaterial.name.trim()) {
+                      toast.error('El nombre es obligatorio')
+                      return
+                    }
+                    try {
+                      const created = await post<RawMaterial>('/api/raw-materials', {
+                        name: newMaterial.name.trim(),
+                        unit: newMaterial.unit.trim() || 'ud',
+                        stock: parseFloat(newMaterial.stock) || 0,
+                        minStock: parseFloat(newMaterial.minStock) || 0,
+                      })
+                      setMaterials([...materials, created])
+                      // Auto-add to recipes
+                      setRecipes([...recipes, { rawMaterialId: created.id, quantity: 1 }])
+                      setNewMaterial({ name: '', unit: 'ud', stock: '0', minStock: '0' })
+                      setShowNewMaterialRow(false)
+                      toast.success(`Materia prima "${created.name}" creada y añadida a la receta`)
+                    } catch {
+                      toast.error('No se pudo crear la materia prima')
+                    }
+                  }}
+                >
+                  <Save className="w-3.5 h-3.5" /> Crear y añadir
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => {
+                    setShowNewMaterialRow(false)
+                    setNewMaterial({ name: '', unit: 'ud', stock: '0', minStock: '0' })
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
           {recipes.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-              Sin ingredientes. Añade las materias primas que componen este producto.
+              Sin ingredientes. Añade las materias primas que componen este producto, o crea una nueva con el botón de arriba.
             </div>
           ) : (
             <div className="space-y-2">
@@ -766,23 +871,221 @@ function MaterialDialog({
   )
 }
 
-// ==================== LISTA DE LA COMPRA ====================
 
-function CompraTab() {
-  const [items, setItems] = useState<Purchase[]>([])
+// ==================== LISTA DE LA COMPRA (checklist auto) ====================
+
+function ListaCompraTab({ onPurchased }: { onPurchased: () => void }) {
   const [materials, setMaterials] = useState<RawMaterial[]>([])
   const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
+  // Map of materialId -> { quantity, unitPrice }
+  const [inputs, setInputs] = useState<Record<string, { quantity: string; unitPrice: string }>>({})
+  // Track which items have been "comprados" in this session (optimistic tachado)
+  const [justBought, setJustBought] = useState<Set<string>>(new Set())
+  const [submitting, setSubmitting] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
     try {
-      const [purchases, mats] = await Promise.all([
-        get<Purchase[]>('/api/purchases'),
-        get<RawMaterial[]>('/api/raw-materials'),
-      ])
-      setItems(purchases)
-      setMaterials(mats)
+      const data = await get<RawMaterial[]>('/api/raw-materials')
+      setMaterials(data)
+    } catch {
+      toast.error('No se pudieron cargar las materias primas')
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => {
+    load()
+  }, [])
+
+  // Shopping list items = materials that are critical OR recently purchased (tachado within 24h)
+  const shoppingItems = useMemo(() => {
+    return materials
+      .filter((m) => m.inShoppingList || (!m.inShoppingList && m.critical) || (m.stock < m.minStock))
+      .filter((m) => {
+        // If tachado and stock is now OK, still show as tachado until 24h pass
+        const lastTs = m.lastPurchasedAt ? new Date(m.lastPurchasedAt).getTime() : 0
+        const within24h = lastTs > 0 && Date.now() - lastTs < 24 * 60 * 60 * 1000
+        // Show if critical OR within24h
+        return m.stock < m.minStock || within24h
+      })
+  }, [materials])
+
+  function setInput(id: string, field: 'quantity' | 'unitPrice', value: string) {
+    setInputs((prev) => ({
+      ...prev,
+      [id]: { quantity: prev[id]?.quantity || '', unitPrice: prev[id]?.unitPrice || '', [field]: value },
+    }))
+  }
+
+  async function comprar(m: RawMaterial) {
+    const inp = inputs[m.id] || { quantity: '', unitPrice: '' }
+    const qty = parseFloat(inp.quantity)
+    const price = parseFloat(inp.unitPrice)
+    if (!qty || qty <= 0) {
+      toast.error('Introduce una cantidad válida')
+      return
+    }
+    if (!price || price < 0) {
+      toast.error('Introduce un precio válido')
+      return
+    }
+    setSubmitting(m.id)
+    try {
+      // Create a Purchase with source="shopping-list", single item
+      await post('/api/purchases', {
+        source: 'shopping-list',
+        items: [{ rawMaterialId: m.id, quantity: qty, unitPrice: price }],
+      })
+      toast.success(`${m.name} comprado · stock actualizado`)
+      setJustBought((prev) => new Set(prev).add(m.id))
+      onPurchased()
+      await load()
+    } catch {
+      toast.error('No se pudo registrar la compra')
+    } finally {
+      setSubmitting(null)
+    }
+  }
+
+  const totalEstimado = shoppingItems.reduce((s, m) => {
+    const inp = inputs[m.id]
+    if (inp && inp.quantity && inp.unitPrice) {
+      return s + parseFloat(inp.quantity) * parseFloat(inp.unitPrice)
+    }
+    return s
+  }, 0)
+
+  return (
+    <div>
+      <Toolbar>
+        <div className="flex-1">
+          <p className="text-sm text-muted-foreground">
+            Lista automática de materias primas en estado crítico. Introduce la cantidad comprada y el precio para tachar el item.
+            Los items tachados desaparecen a las 24h.
+          </p>
+        </div>
+        <button className="btn-outline text-sm" onClick={load}>
+          <RotateCcw className="w-4 h-4" /> Actualizar
+        </button>
+      </Toolbar>
+
+      <Card className="p-0 overflow-hidden">
+        {loading ? (
+          <LoadingBlock label="Cargando lista de la compra…" />
+        ) : shoppingItems.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 className="w-6 h-6" />}
+            title="Lista de la compra vacía"
+            description="No hay materias primas en estado crítico. Cuando una materia llegue por debajo de su mínimo, aparecerá aquí automáticamente."
+          />
+        ) : (
+          <>
+            <div className="overflow-x-auto custom-scroll">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                  <tr>
+                    <th className="text-left font-medium px-4 py-3">Materia prima</th>
+                    <th className="text-left font-medium px-4 py-3 w-28">Stock actual</th>
+                    <th className="text-left font-medium px-4 py-3 w-28">Mínimo</th>
+                    <th className="text-left font-medium px-4 py-3 w-32">Cantidad comprada</th>
+                    <th className="text-left font-medium px-4 py-3 w-32">Precio (€)</th>
+                    <th className="text-right font-medium px-4 py-3 w-32">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {shoppingItems.map((m) => {
+                    const tachado = justBought.has(m.id) || (m.shoppingTachado ?? false)
+                    const inp = inputs[m.id] || { quantity: '', unitPrice: '' }
+                    const canBuy = parseFloat(inp.quantity) > 0 && parseFloat(inp.unitPrice) >= 0 && inp.unitPrice !== ''
+                    return (
+                      <tr
+                        key={m.id}
+                        className={`transition-colors ${tachado ? 'bg-muted/30 opacity-50' : 'hover:bg-accent/40'}`}
+                      >
+                        <td className={`px-4 py-3 font-medium ${tachado ? 'line-through' : ''}`}>
+                          {m.name}
+                          {tachado && (
+                            <Badge variant="sage" className="ml-2">
+                              <CheckCircle2 className="w-3 h-3" /> comprado
+                            </Badge>
+                          )}
+                        </td>
+                        <td className={`px-4 py-3 text-[color:var(--warn)] font-medium ${tachado ? 'line-through' : ''}`}>
+                          {m.stock} {m.unit}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{m.minStock} {m.unit}</td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="input-wellness py-1.5"
+                            placeholder="Cant."
+                            value={inp.quantity}
+                            onChange={(e) => setInput(m.id, 'quantity', e.target.value)}
+                            disabled={tachado}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="input-wellness py-1.5"
+                            placeholder="€/ud"
+                            value={inp.unitPrice}
+                            onChange={(e) => setInput(m.id, 'unitPrice', e.target.value)}
+                            disabled={tachado}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            className="btn-sage text-xs px-3 py-1.5"
+                            onClick={() => comprar(m)}
+                            disabled={tachado || !canBuy || submitting === m.id}
+                          >
+                            {tachado ? (
+                              <><CheckCircle2 className="w-3.5 h-3.5" /> Tachado</>
+                            ) : submitting === m.id ? (
+                              '…'
+                            ) : (
+                              <><CheckCircle2 className="w-3.5 h-3.5" /> Comprar</>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {totalEstimado > 0 && (
+              <div className="p-4 border-t border-border flex items-center justify-between bg-muted/20">
+                <span className="text-sm text-muted-foreground">Total estimado de la compra</span>
+                <span className="text-lg font-semibold text-sage">{eur(totalEstimado)}</span>
+              </div>
+            )}
+          </>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+// ==================== COMPRAS (historial + conciliación) ====================
+
+function ComprasTab({ onChanged }: { onChanged: () => void }) {
+  const [items, setItems] = useState<Purchase[]>([])
+  const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'pending' | 'conciliated'>('all')
+
+  async function load() {
+    setLoading(true)
+    try {
+      const data = await get<Purchase[]>('/api/purchases')
+      setItems(data)
     } catch {
       toast.error('No se pudieron cargar las compras')
     } finally {
@@ -793,7 +1096,15 @@ function CompraTab() {
     load()
   }, [])
 
+  const filtered = useMemo(() => {
+    if (filter === 'pending') return items.filter((p) => !p.conciliatedAt)
+    if (filter === 'conciliated') return items.filter((p) => p.conciliatedAt)
+    return items
+  }, [items, filter])
+
   const totalGastado = items.reduce((s, p) => s + p.totalAmount, 0)
+  const totalConciliado = items.filter((p) => p.conciliatedAt).reduce((s, p) => s + p.totalAmount, 0)
+  const totalPendiente = totalGastado - totalConciliado
 
   function exportCsv() {
     const rows: any[] = []
@@ -807,6 +1118,9 @@ function CompraTab() {
           unidad: it.rawMaterial?.unit || '',
           precioUnitario: it.unitPrice,
           subtotal: it.subtotal,
+          total: p.totalAmount,
+          conciliado: p.conciliatedAt ? 'sí' : 'no',
+          origen: p.source === 'shopping-list' ? 'lista compra' : 'manual',
         })
       }
     }
@@ -817,29 +1131,41 @@ function CompraTab() {
   return (
     <div>
       <Toolbar>
-        <div className="flex-1 flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Total gastado</p>
             <p className="text-lg font-semibold text-foreground">{eur(totalGastado)}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Compras</p>
-            <p className="text-lg font-semibold text-foreground">{items.length}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Conciliado</p>
+            <p className="text-lg font-semibold text-sage">{eur(totalConciliado)}</p>
           </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Pendiente</p>
+            <p className="text-lg font-semibold text-[color:var(--warn)]">{eur(totalPendiente)}</p>
+          </div>
+        </div>
+        <div className="inline-flex bg-muted/60 rounded-full p-1">
+          {([
+            ['all', 'Todas'],
+            ['pending', 'No conciliado'],
+            ['conciliated', 'Conciliado'],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setFilter(id)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                filter === id ? 'bg-card text-sage shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         <button className="btn-outline text-sm" onClick={exportCsv} disabled={items.length === 0}>
           <Download className="w-4 h-4" /> Exportar CSV
         </button>
-        <button
-          className="btn-sage text-sm"
-          onClick={() => {
-            if (materials.length === 0) {
-              toast.error('Primero crea materias primas en la pestaña correspondiente')
-              return
-            }
-            setCreating(true)
-          }}
-        >
+        <button className="btn-sage text-sm" onClick={() => setCreating(true)}>
           <Plus className="w-4 h-4" /> Registrar compra
         </button>
       </Toolbar>
@@ -847,11 +1173,11 @@ function CompraTab() {
       <Card className="p-0 overflow-hidden">
         {loading ? (
           <LoadingBlock label="Cargando compras…" />
-        ) : items.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon={<ShoppingCart className="w-6 h-6" />}
-            title="Sin compras registradas"
-            description="Registra una compra de materias primas para empezar a controlar los gastos de suministros."
+            title="Sin compras"
+            description="Las compras que registres (manualmente o desde la Lista de la Compra) aparecerán aquí. Sube la factura para conciliarlas."
           />
         ) : (
           <div className="overflow-x-auto custom-scroll">
@@ -859,55 +1185,94 @@ function CompraTab() {
               <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
                 <tr>
                   <th className="text-left font-medium px-4 py-3">Fecha</th>
+                  <th className="text-left font-medium px-4 py-3">Origen</th>
                   <th className="text-left font-medium px-4 py-3">Proveedor</th>
                   <th className="text-left font-medium px-4 py-3">Items</th>
                   <th className="text-left font-medium px-4 py-3">Detalle</th>
                   <th className="text-right font-medium px-4 py-3">Total</th>
+                  <th className="text-left font-medium px-4 py-3">Estado</th>
                   <th className="text-right font-medium px-4 py-3">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {items.map((p) => (
-                  <tr key={p.id} className="hover:bg-accent/40 transition-colors">
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(p.date).toLocaleDateString('es-ES')}
-                    </td>
-                    <td className="px-4 py-3">{p.supplier || '—'}</td>
-                    <td className="px-4 py-3">{(p.items || []).length}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {(p.items || []).slice(0, 3).map((it, i) => (
-                        <span key={it.id}>
-                          {i > 0 && ', '}
-                          {it.rawMaterial?.name} ×{it.quantity}{it.rawMaterial?.unit}
-                        </span>
-                      ))}
-                      {(p.items || []).length > 3 && (
-                        <span> +{p.items.length - 3} más</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-foreground">
-                      {eur(p.totalAmount)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        className="btn-ghost p-2 text-muted-foreground hover:text-[color:var(--warn)]"
-                        onClick={async () => {
-                          if (!confirm('¿Eliminar esta compra? Se revertirán los incrementos de stock.')) return
-                          try {
-                            await del(`/api/purchases/${p.id}`)
-                            toast.success('Compra eliminada')
-                            load()
-                          } catch {
-                            toast.error('No se pudo eliminar')
-                          }
-                        }}
-                        aria-label="Eliminar compra"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((p) => {
+                  const conciliated = !!p.conciliatedAt
+                  return (
+                    <tr key={p.id} className="hover:bg-accent/40 transition-colors">
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {new Date(p.date).toLocaleDateString('es-ES')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={p.source === 'shopping-list' ? 'sage' : 'muted'}>
+                          {p.source === 'shopping-list' ? 'Lista compra' : 'Manual'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">{p.supplier || '—'}</td>
+                      <td className="px-4 py-3">{(p.items || []).length}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {(p.items || []).slice(0, 3).map((it, i) => (
+                          <span key={it.id}>
+                            {i > 0 && ', '}
+                            {it.rawMaterial?.name} ×{it.quantity}{it.rawMaterial?.unit}
+                          </span>
+                        ))}
+                        {(p.items || []).length > 3 && (
+                          <span> +{p.items.length - 3} más</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-foreground">
+                        {eur(p.totalAmount)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {conciliated ? (
+                          <Badge variant="sage">
+                            <CheckCircle2 className="w-3 h-3" /> Conciliado
+                          </Badge>
+                        ) : (
+                          <Badge variant="warn">
+                            <AlertTriangle className="w-3 h-3" /> No conciliado
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex gap-1">
+                          {!conciliated && (
+                            <ConciliateButton purchaseId={p.id} onDone={load} />
+                          )}
+                          {conciliated && p.invoiceUrl && (
+                            <a
+                              href={p.invoiceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-ghost p-2 text-sage"
+                              aria-label="Ver factura"
+                              title="Ver factura"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </a>
+                          )}
+                          <button
+                            className="btn-ghost p-2 text-muted-foreground hover:text-[color:var(--warn)]"
+                            onClick={async () => {
+                              if (!confirm('¿Eliminar esta compra? Se revertirán los incrementos de stock.')) return
+                              try {
+                                await del(`/api/purchases/${p.id}`)
+                                toast.success('Compra eliminada')
+                                load()
+                                onChanged()
+                              } catch {
+                                toast.error('No se pudo eliminar')
+                              }
+                            }}
+                            aria-label="Eliminar compra"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -916,11 +1281,11 @@ function CompraTab() {
 
       {creating && (
         <PurchaseDialog
-          materials={materials}
           onClose={() => setCreating(false)}
           onSaved={() => {
             setCreating(false)
             load()
+            onChanged()
           }}
         />
       )}
@@ -928,22 +1293,71 @@ function CompraTab() {
   )
 }
 
+function ConciliateButton({ purchaseId, onDone }: { purchaseId: string; onDone: () => void }) {
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFile(file: File) {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch(`/api/purchases/${purchaseId}/conciliate`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Error al subir')
+      }
+      toast.success('Factura subida · compra conciliada')
+      onDone()
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo subir la factura')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <label className="btn-sage text-xs px-3 py-1.5 cursor-pointer">
+      <Upload className="w-3.5 h-3.5" /> {uploading ? 'Subiendo…' : 'Subir factura'}
+      <input
+        type="file"
+        accept=".pdf,image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) handleFile(f)
+          e.target.value = ''
+        }}
+      />
+    </label>
+  )
+}
+
+// PurchaseDialog — registro manual de compra (también disponible)
 function PurchaseDialog({
-  materials,
   onClose,
   onSaved,
 }: {
-  materials: RawMaterial[]
   onClose: () => void
   onSaved: () => void
 }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [supplier, setSupplier] = useState('')
   const [notes, setNotes] = useState('')
-  const [items, setItems] = useState<Array<{ rawMaterialId: string; quantity: number; unitPrice: number }>>(
-    materials.length > 0 ? [{ rawMaterialId: materials[0].id, quantity: 1, unitPrice: 0 }] : []
-  )
+  const [materials, setMaterials] = useState<RawMaterial[]>([])
+  const [items, setItems] = useState<Array<{ rawMaterialId: string; quantity: number; unitPrice: number }>>([])
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    get<RawMaterial[]>('/api/raw-materials').then((mats) => {
+      setMaterials(mats)
+      if (mats.length > 0) {
+        setItems([{ rawMaterialId: mats[0].id, quantity: 1, unitPrice: 0 }])
+      }
+    }).catch(() => toast.error('No se pudieron cargar las materias primas'))
+  }, [])
 
   function addItem() {
     if (materials.length === 0) return
@@ -952,9 +1366,7 @@ function PurchaseDialog({
   function updateItem(idx: number, field: 'rawMaterialId' | 'quantity' | 'unitPrice', value: string) {
     setItems(
       items.map((it, i) =>
-        i === idx
-          ? { ...it, [field]: field === 'rawMaterialId' ? value : Number(value) }
-          : it
+        i === idx ? { ...it, [field]: field === 'rawMaterialId' ? value : Number(value) } : it
       )
     )
   }
@@ -975,6 +1387,7 @@ function PurchaseDialog({
         date,
         supplier: supplier || null,
         notes: notes || null,
+        source: 'manual',
         items,
       })
       toast.success('Compra registrada · stock actualizado')
@@ -990,7 +1403,7 @@ function PurchaseDialog({
     <ModalShell
       open
       onClose={onClose}
-      title="Registrar compra de materias primas"
+      title="Registrar compra manual"
       description="Introduce la cantidad comprada y el precio. El stock de cada materia se incrementará automáticamente."
       size="xl"
       footer={

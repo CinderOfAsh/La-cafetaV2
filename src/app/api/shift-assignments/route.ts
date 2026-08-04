@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST — create assignment; validate max 2 persons per shiftId+date
+// POST — create assignment; validate max 2 persons per shiftId+date AND role uniqueness
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -39,13 +39,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Faltan: shiftId, userId, date' }, { status: 400 })
     }
 
+    const finalRole = role || 'CAMARERO'
+
     // Validate max 2 persons per shift+date
-    const existing = await db.shiftAssignment.count({
+    const existing = await db.shiftAssignment.findMany({
       where: { shiftId, date },
+      include: { user: { select: { id: true, name: true } } },
     })
-    if (existing >= 2) {
+    if (existing.length >= 2) {
       return NextResponse.json(
         { error: 'Ya hay 2 personas asignadas a este turno en esta fecha' },
+        { status: 400 }
+      )
+    }
+
+    // Validate role uniqueness: no 2 cocineros or 2 camareros in same shift+date
+    const roleTaken = existing.find((a) => a.role === finalRole)
+    if (roleTaken) {
+      return NextResponse.json(
+        {
+          error: `Ya hay un ${finalRole.toLowerCase()} asignado a este turno (${roleTaken.user?.name || 'otra persona'}). Cada turno debe tener 1 cocinero y 1 camarero.`,
+        },
         { status: 400 }
       )
     }
@@ -55,7 +69,7 @@ export async function POST(req: Request) {
         shiftId,
         userId,
         date,
-        role: role || 'CAMARERO',
+        role: finalRole,
       },
       include: {
         shift: true,

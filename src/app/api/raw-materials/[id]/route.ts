@@ -2,7 +2,17 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 function parseMaterial(m: any) {
-  return { ...m, critical: m.stock < m.minStock }
+  const critical = m.stock < m.minStock
+  const lastPurchasedAt = m.lastPurchasedAt ? new Date(m.lastPurchasedAt).getTime() : 0
+  const now = Date.now()
+  const recentlyPurchased = lastPurchasedAt > 0 && (now - lastPurchasedAt) < 24 * 60 * 60 * 1000
+  return {
+    ...m,
+    critical,
+    inShoppingList: critical || recentlyPurchased,
+    shoppingTachado: recentlyPurchased,
+    lastPurchasedAt: m.lastPurchasedAt,
+  }
 }
 
 // PUT — update raw material (name, unit, stock, minStock)

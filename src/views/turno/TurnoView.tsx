@@ -8,7 +8,7 @@ import { useAppStore } from '@/lib/store'
 import { get, post } from '@/lib/api'
 import { todayStr } from '@/lib/format'
 import { LivePizarra } from '@/components/pos'
-import { Sunrise, Sunset, Lock, CheckCircle2, LogOut } from 'lucide-react'
+import { Sunrise, Sunset, Lock, CheckCircle2, LogOut, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Shift, ShiftAssignment, Protocol } from '@/lib/types'
 
@@ -186,11 +186,22 @@ export function TurnoView() {
             <h3 className="font-serif text-2xl mb-2">Turno finalizado</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
               Has completado todos los protocolos de cierre. El turno de hoy queda registrado.
-              Puedes volver al hub cuando quieras.
+              Si necesitas hacer una venta adicional, puedes reabrir el turno.
             </p>
-            <button className="btn-sage" onClick={() => setView('hub-empleado')}>
-              <LogOut className="w-4 h-4" /> Volver al hub
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                className="btn-outline"
+                onClick={() => {
+                  toast.info('Turno reabierto · puedes hacer ventas adicionales')
+                  persistStage('ventas')
+                }}
+              >
+                <RotateCcw className="w-4 h-4" /> Reabrir turno
+              </button>
+              <button className="btn-sage" onClick={() => setView('hub-empleado')}>
+                <LogOut className="w-4 h-4" /> Volver al hub
+              </button>
+            </div>
           </Card>
         ) : showAperturaOverlay ? (
           <>

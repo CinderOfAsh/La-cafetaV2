@@ -7,6 +7,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const start = searchParams.get('start')
     const end = searchParams.get('end')
+    const source = searchParams.get('source') // "manual" | "shopping-list"
 
     const where: any = {}
     if (start || end) {
@@ -14,6 +15,7 @@ export async function GET(req: Request) {
       if (start) where.date.gte = new Date(start + 'T00:00:00.000Z')
       if (end) where.date.lte = new Date(end + 'T23:59:59.999Z')
     }
+    if (source) where.source = source
 
     const items = await db.purchase.findMany({
       where,
@@ -30,11 +32,11 @@ export async function GET(req: Request) {
 }
 
 // POST — create purchase with items, increment rawMaterial.stock, set totalAmount
-// Body: { date?, supplier?, notes?, items: [{rawMaterialId, quantity, unitPrice}] }
+// Body: { date?, supplier?, notes?, source?: "manual" | "shopping-list", items: [{rawMaterialId, quantity, unitPrice}] }
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { date, supplier, notes, items } = body
+    const { date, supplier, notes, items, source = 'manual' } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'La compra debe tener al menos un item' }, { status: 400 })
@@ -62,16 +64,21 @@ export async function POST(req: Request) {
           supplier: supplier || null,
           notes: notes || null,
           totalAmount,
+          source,
           items: { create: validItems },
         },
         include: { items: { include: { rawMaterial: true } } },
       })
 
-      // Increment raw material stock for each item
+      // Increment raw material stock + set lastPurchasedAt for each item
+      const now = new Date()
       for (const it of validItems) {
         await tx.rawMaterial.update({
           where: { id: it.rawMaterialId },
-          data: { stock: { increment: it.quantity } },
+          data: {
+            stock: { increment: it.quantity },
+            lastPurchasedAt: now,
+          },
         })
       }
 

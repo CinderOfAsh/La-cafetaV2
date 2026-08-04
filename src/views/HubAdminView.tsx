@@ -2,7 +2,6 @@
 
 import {
   Package,
-  Boxes,
   Users,
   ClipboardList,
   BarChart3,
@@ -12,7 +11,6 @@ import {
 import { useAppStore, type View } from '@/lib/store'
 import { AppHeader } from '@/components/AppHeader'
 import { PageHeader } from '@/components/ui-bits'
-import { toast } from 'sonner'
 
 interface HubCard {
   id: string
@@ -27,22 +25,14 @@ const cards: HubCard[] = [
   {
     id: 'productos',
     title: 'Productos',
-    description: 'Catálogo, precios, etiquetas y recetas.',
+    description: 'Catálogo, materias primas, recetas, lista de la compra y gastos.',
     icon: Package,
     view: 'admin-productos',
   },
   {
-    id: 'materias',
-    title: 'Materias Primas',
-    description: 'Inventario de insumos y existencias.',
-    icon: Boxes,
-    view: 'admin-productos',
-    legacy: true,
-  },
-  {
     id: 'personal',
     title: 'Gestión de Personal',
-    description: 'Empleados, turnos, asignaciones y deudas.',
+    description: 'Empleados, turnos y asignaciones.',
     icon: Users,
     view: 'admin-personal',
   },
@@ -89,12 +79,7 @@ export function HubAdminView() {
             return (
               <button
                 key={c.id}
-                onClick={() => {
-                  if (c.legacy) {
-                    toast.info('Funcionalidad legacy — usando Inventario dentro de Productos.')
-                  }
-                  setView(c.view)
-                }}
+                onClick={() => setView(c.view)}
                 className="card-wellness hover-lift p-5 sm:p-6 text-left animate-fade-up"
                 style={{ animationDelay: `${i * 70}ms` }}
               >
