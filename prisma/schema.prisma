@@ -120,22 +120,28 @@ model ShiftAssignment {
 
   shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  swaps ShiftSwap[]
-
-  @@unique([shiftId, date, userId])
+  originalSwaps    ShiftSwap[] @relation("OriginalAssignment")
+  replacementSwaps ShiftSwap[] @relation("ReplacementAssignment")
 }
 
 model ShiftSwap {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   originalUserId      String
   replacementUserId   String
   shiftAssignmentId   String
-  type                String   @default("swap") // swap | substitute
-  createdAt           DateTime @default(now())
+  type                String    @default("swap") // swap | substitute
+  status              String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  // For "swap" type: the replacement's assignment to exchange with
+  replacementShiftAssignmentId String?
+  seenByOriginal      Boolean   @default(false)
+  seenByReplacement   Boolean   @default(false)
+  decidedAt           DateTime?
+  createdAt           DateTime  @default(now())
 
   originalUser     User            @relation("OriginalUser", fields: [originalUserId], references: [id])
   replacementUser  User            @relation("ReplacementUser", fields: [replacementUserId], references: [id])
-  shiftAssignment  ShiftAssignment @relation(fields: [shiftAssignmentId], references: [id], onDelete: Cascade)
+  shiftAssignment              ShiftAssignment  @relation("OriginalAssignment", fields: [shiftAssignmentId], references: [id], onDelete: Cascade)
+  replacementShiftAssignment   ShiftAssignment? @relation("ReplacementAssignment", fields: [replacementShiftAssignmentId], references: [id], onDelete: SetNull)
 }
 
 model SaleTransaction {

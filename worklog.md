@@ -493,3 +493,44 @@ Stage Summary:
 - Sábados y domingos deshabilitados correctamente
 - Notificaciones de turno lleno como toast en esquina superior derecha
 - Selects siempre visibles para cambiar de turno sin cerrar el modal
+
+---
+Task ID: 10
+Agent: Super Z (main)
+Task: Sistema completo de intercambio de turnos desde cero
+
+Work Log:
+- Schema: ampliado ShiftSwap con status (PENDING/APPROVED/REJECTED), seenByOriginal, seenByReplacement, decidedAt, replacementShiftAssignmentId
+- Eliminado @@unique([shiftId, date, userId]) de ShiftAssignment (impedía intercambios cuando el usuario destino ya tenía asignación ese día+turno)
+- Añadidas relaciones nombradas en ShiftAssignment (originalSwaps/replacementSwaps) y ShiftSwap (shiftAssignment/replacementShiftAssignment con "OriginalAssignment"/"ReplacementAssignment")
+- APIs nuevas:
+  - GET /api/shift-swaps?pendingFor=userId (PENDING + no vistos por el destinatario)
+  - GET /api/shift-swaps?responseFor=userId (APPROVED/REJECTED + no vistos por el solicitante)
+  - POST /api/shift-swaps/[id]/approve (procesa intercambio: swap de userIds en transacción)
+  - POST /api/shift-swaps/[id]/reject (marca como REJECTED)
+  - POST /api/shift-swaps/[id]/mark-seen (marca visto por original o replacement)
+- CalendarioView reescrito desde cero:
+  - Pantalla de identificación con dropdown de empleados
+  - Modo normal: turnos propios en amarillo, otros en gris
+  - Modal "Intercambiar turno" al clickar un turno propio
+  - Modo selección: turnos propios en gris, otros en amarillo (intercambiables)
+  - Modal "Selecciona compañero" al clickar un turno ajeno
+  - Toast: "Tu solicitud de intercambio ha sido procesada, está pendiente de aprobación, paciencia manin"
+  - Modal de solicitud pendiente al loguear (para el destinatario): botones Aceptar / Revisar / Más tarde
+  - Aceptar: confirm() → procesa intercambio
+  - Revisar: cierra modal, muestra calendario con turno origen en rojo, panel lateral desplegable con Aceptar/Rechazar
+  - Modal de respuesta al loguear (para el solicitante): "Enhorabuena mae te dijeron que si" o "El diablo loco te rechazaron la vaina"
+- Verificación Agent Browser end-to-end:
+  - Aitana selecciona su turno del día 4 → "Intercambiar turno" → "Seleccionar turno" → clicka turno de Angel día 5 → "Selecciona compañero" → confirma → toast "paciencia manin" ✓
+  - Angel entra al calendario → modal "Aitana quiere intercambiar su turno contigo" → Aceptar → confirm → "Intercambio procesado" ✓
+  - Asignaciones intercambiadas: Angel tiene día 4, Aitana tiene día 5 ✓
+  - Aitana entra al calendario → modal "¡Intercambio aprobado!" → "Enhorabuena mae, te dijeron que si" ✓
+- Lint: 0 errores, 0 warnings
+
+Stage Summary:
+- Flow completo de intercambio de turnos funcional end-to-end
+- Identificación por dropdown, turnos propios resaltados en amarillo
+- Modo selección con turnos ajenos en amarillo (intercambiables)
+- Solicitudes pendientes aparecen como modal al loguear
+- Revisión con panel lateral desplegable
+- Respuestas con mensajes personalizados ("Enhorabuena mae" / "El diablo loco")

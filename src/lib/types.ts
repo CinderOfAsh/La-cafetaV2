@@ -93,13 +93,24 @@ export interface ShiftAssignment {
   user?: { id: string; name: string; email: string; role: string }
 }
 
+export type SwapStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
 export interface ShiftSwap {
   id: string
   originalUserId: string
   replacementUserId: string
   shiftAssignmentId: string
   type: SwapType
+  status: SwapStatus
+  replacementShiftAssignmentId?: string | null
+  seenByOriginal: boolean
+  seenByReplacement: boolean
+  decidedAt?: string | null
   createdAt: string
+  originalUser?: { id: string; name: string; email: string }
+  replacementUser?: { id: string; name: string; email: string }
+  shiftAssignment?: ShiftAssignment & { shift?: Shift }
+  replacementShiftAssignment?: ShiftAssignment & { shift?: Shift } | null
 }
 
 export interface SaleTransaction {
