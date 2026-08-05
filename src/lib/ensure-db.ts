@@ -182,32 +182,51 @@ CREATE UNIQUE INDEX "Protocol_productId_key" ON "Protocol"("productId");
 
 `
 
-export async function ensureDb(db: PrismaClient) {
-  // 1) Crear tablas si no existen (BD vacía)
-  const tables = await db.$queryRawUnsafe<{ name: string }[]>(
-    "SELECT name FROM sqlite_master WHERE type='table'"
-  )
-  const hasUser = tables.some((t) => t.name === 'User')
-  if (!hasUser) {
-    const statements = SCHEMA_SQL.split(/;\s*\n/).map((s) => s.trim()).filter(Boolean)
-    for (const stmt of statements) {
-      await db.$executeRawUnsafe(stmt)
-    }
+// Mutex simple: garantiza que la inicialización solo corre una vez por proceso,
+// aunque varias rutas importen db.ts a la vez (workers de build, hot reload, etc.)
+let initPromise: Promise<void> | null = null
+
+export function ensureDb(db: PrismaClient): Promise<void> {
+  if (!initPromise) {
+    initPromise = doInit(db).catch((err) => {
+      initPromise = null // si falla, permitir reintento
+      throw err
+    })
+  }
+  return initPromise
+}
+
+async function doInit(db: PrismaClient) {
+  // 1) Esquema: CREATE ... IF NOT EXISTS → idempotente y seguro ante carreras
+  const statements = SCHEMA_SQL.replace(/CREATE TABLE/g, 'CREATE TABLE IF NOT EXISTS')
+    .replace(/CREATE UNIQUE INDEX/g, 'CREATE UNIQUE INDEX IF NOT EXISTS')
+    .split(/;\s*\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  for (const stmt of statements) {
+    await db.$executeRawUnsafe(stmt)
   }
 
-  // 2) Sembrar datos mínimos si no hay usuarios
-  const userCount = await db.user.count()
-  if (userCount > 0) return
+  // 2) Seed: usuarios con upsert (email único) → nunca duplica
+  const admin = await db.user.upsert({
+    where: { email: 'bullerre@lacafeta.com' },
+    update: { role: 'ADMIN' },
+    create: { name: 'Bullerre', email: 'bullerre@lacafeta.com', role: 'ADMIN' },
+  })
+  const angel = await db.user.upsert({
+    where: { email: 'angel@lacafeta.com' },
+    update: {},
+    create: { name: 'Angel', email: 'angel@lacafeta.com', role: 'CAMARERO' },
+  })
+  const aitana = await db.user.upsert({
+    where: { email: 'aitana@lacafeta.com' },
+    update: {},
+    create: { name: 'Aitana', email: 'aitana@lacafeta.com', role: 'COCINERO' },
+  })
 
-  const admin = await db.user.create({
-    data: { name: 'Bullerre', email: 'bullerre@lacafeta.com', role: 'ADMIN' },
-  })
-  const angel = await db.user.create({
-    data: { name: 'Angel', email: 'angel@lacafeta.com', role: 'CAMARERO' },
-  })
-  const aitana = await db.user.create({
-    data: { name: 'Aitana', email: 'aitana@lacafeta.com', role: 'COCINERO' },
-  })
+  // 3) Datos de demo: solo si no hay productos todavía (estado parcial → completa)
+  const productCount = await db.product.count()
+  if (productCount > 0) return
 
   const [bocadillo, kafe, agua] = await Promise.all([
     db.product.create({
@@ -244,16 +263,21 @@ export async function ensureDb(db: PrismaClient) {
     ],
   })
 
-  await db.productRecipe.createMany({
-    data: [
-      { productId: bocadillo.id, rawMaterialId: (await db.rawMaterial.findFirst({ where: { name: 'Barra de pan' } }))!.id, quantity: 1 },
-      { productId: bocadillo.id, rawMaterialId: (await db.rawMaterial.findFirst({ where: { name: 'Lomo' } }))!.id, quantity: 2 },
-      { productId: bocadillo.id, rawMaterialId: (await db.rawMaterial.findFirst({ where: { name: 'Queso' } }))!.id, quantity: 1 },
-    ],
-  })
+  const pan = await db.rawMaterial.findFirst({ where: { name: 'Barra de pan' } })
+  const lomo = await db.rawMaterial.findFirst({ where: { name: 'Lomo' } })
+  const queso = await db.rawMaterial.findFirst({ where: { name: 'Queso' } })
+  if (pan && lomo && queso) {
+    await db.productRecipe.createMany({
+      data: [
+        { productId: bocadillo.id, rawMaterialId: pan.id, quantity: 1 },
+        { productId: bocadillo.id, rawMaterialId: lomo.id, quantity: 2 },
+        { productId: bocadillo.id, rawMaterialId: queso.id, quantity: 1 },
+      ],
+    })
+  }
 
-  // Algunas ventas para que el dashboard no salga vacío
-  const saleTime = new Date(Date.now() - 2 * 60 * 60 * 1000) // hace 2h
+  // Un par de ventas para que el dashboard no salga vacío
+  const saleTime = new Date(Date.now() - 2 * 60 * 60 * 1000)
   await db.saleTransaction.create({
     data: {
       createdAt: saleTime,
@@ -283,12 +307,5 @@ export async function ensureDb(db: PrismaClient) {
     },
   })
 
-  console.log('[ensureDb] esquema creado y datos sembrados:', {
-    admin: admin.email,
-    empleados: [angel.email, aitana.email],
-    productos: 3,
-    turnos: 2,
-    protocolos: 2,
-    ventas: 2,
-  })
+  console.log('[ensureDb] esquema creado y datos sembrados (admin: bullerre@lacafeta.com)')
 }

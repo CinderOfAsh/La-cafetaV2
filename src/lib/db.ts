@@ -13,8 +13,12 @@ const client =
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = client
 
-// Crea el esquema y siembra datos mínimos si la BD está vacía (primer arranque).
-// Top-level await: ningún importador usa `db` hasta que esto termina.
-await ensureDb(client)
+// Inicializa esquema + seed si la BD está vacía. Solo en tiempo de EJECUCIÓN:
+// durante `next build` (fase de recolección de página con 40 workers) no se toca
+// la BD — eso lo hace el server al arrancar/primera petición.
+const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+if (!isBuildPhase) {
+  await ensureDb(client)
+}
 
 export const db = client
