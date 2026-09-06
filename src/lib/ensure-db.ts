@@ -381,6 +381,172 @@ async function doInit(db: PrismaClient) {
     if (!exists) await db.rawMaterial.create({ data: { name: r.name, unit: r.unit, stock: 0, minStock: r.minStock } })
   }
 
-  console.log('[ensureDb] seed V1 aplicado (16 users + 42 productos + 48 materias primas)')
+  // ===== 5) Renombrar usuarios para que coincidan con el Excel de turnos =====
+  // Javi C → Javi D (es "Javier Díaz" en el Excel de turnos)
+  // Javi M → Javi G (es "Javier García" en el Excel de turnos)
+  await db.user.updateMany({ where: { name: 'Javi C' }, data: { name: 'Javi D' } })
+  await db.user.updateMany({ where: { name: 'Javi M' }, data: { name: 'Javi G' } })
+
+  // ===== 6) Limpiar duplicado "Bakerre" (typo de Bullerre/admin legacy) =====
+  // El admin real va a ser "BakerreGod"; "Bakerre" era ruido.
+  const oldAdmin = await db.user.findFirst({ where: { name: 'Bakerre' } })
+  if (oldAdmin) {
+    // Solo borrar si NO tiene ventas/shifts asociados (seguridad)
+    const salesCount = await db.saleTransaction.count({ where: { employeeId: oldAdmin.id } })
+    if (salesCount === 0) {
+      await db.user.delete({ where: { id: oldAdmin.id } })
+      console.log('[ensureDb] usuario duplicado "Bakerre" eliminado')
+    } else {
+      // Si tiene ventas, solo lo renombramos para que no choque
+      await db.user.update({ where: { id: oldAdmin.id }, data: { name: 'Bakerre-old' } })
+    }
+  }
+
+  // ===== 7) Crear BakerreGod (ADMIN) y Bakr (empleado) =====
+  const ADMIN_EMAIL = 'bakr.ouahid@gmail.com'
+  const EMPLOYEE_EMAIL = 'mohammadbakr.ouahid@alumni.mondragon.edu'
+
+  // Admin: BakerreGod
+  await db.user.upsert({
+    where: { email: ADMIN_EMAIL },
+    update: { name: 'BakerreGod', role: 'ADMIN', isActive: true },
+    create: {
+      name: 'BakerreGod',
+      email: ADMIN_EMAIL,
+      password: '',
+      role: 'ADMIN',
+      isActive: true,
+      customFields: '{}',
+    },
+  })
+
+  // Empleado: Bakr (con el email antiguo de Bakr)
+  await db.user.upsert({
+    where: { email: EMPLOYEE_EMAIL },
+    update: { name: 'Bakr', role: 'EMPLOYEE', isActive: true },
+    create: {
+      name: 'Bakr',
+      email: EMPLOYEE_EMAIL,
+      password: '',
+      role: 'EMPLOYEE',
+      isActive: true,
+      customFields: '{}',
+    },
+  })
+
+  // ===== 8) Crear los 5 turnos de la Cafeta =====
+  const SHIFTS = [
+    { name: 'Mañana LMX',  startTime: '08:45', endTime: '13:00', daysOfWeek: '1,2,4' },     // L, M, J
+    { name: 'Tarde LMX',   startTime: '13:00', endTime: '17:00', daysOfWeek: '1,2,4' },     // L, M, J
+    { name: 'Mediodía X',   startTime: '12:00', endTime: '15:00', daysOfWeek: '3' },         // X
+    { name: 'Tarde X',     startTime: '15:00', endTime: '17:00', daysOfWeek: '3' },         // X
+    { name: 'Mediodía V',  startTime: '12:00', endTime: '14:00', daysOfWeek: '5' },         // V
+  ]
+  const shiftByName: Record<string, string> = {}
+  for (const s of SHIFTS) {
+    const exists = await db.shift.findFirst({ where: { name: s.name } })
+    if (exists) {
+      shiftByName[s.name] = exists.id
+    } else {
+      const created = await db.shift.create({ data: s })
+      shiftByName[s.name] = created.id
+    }
+  }
+
+  // ===== 9) Asignaciones de las 5 semanas de septiembre =====
+  // Estructura por día: lista de [nombre_persona1, nombre_persona2].
+  // Primera persona = COCINERO, segunda = CAMARERO.
+  // En el segundo turno del día se intercambian roles.
+  // Solo metemos septiembre (W1-W5) que es lo que está completo en el Excel.
+  type Pair = [string, string] // [cocinero turno1, camarero turno1]
+  const W1: Record<string, Pair> = {
+    '2026-09-07': ['Bakr', 'Hugo'],          // L
+    '2026-09-08': ['Javier G.', 'Ángel'],    // M
+    '2026-09-09': ['Aitana', 'Vittorio'],    // X
+    '2026-09-10': ['Luca', 'Kawtar'],        // J
+    // V (2026-09-11) — sin dato en W1
+  }
+  const W2: Record<string, Pair> = {
+    '2026-09-14': ['Sofía', 'Elías'],
+    '2026-09-15': ['Claudia', 'Diego V'],
+    '2026-09-16': ['Adrián', 'Javier D.'],
+    '2026-09-17': ['José G.', 'Diego S.'],
+  }
+  const W3: Record<string, Pair> = {
+    '2026-09-21': ['Javier G.', 'Ángel'],
+    '2026-09-22': ['Luca', 'Kawtar'],
+    '2026-09-23': ['Claudia', 'Diego V'],
+    '2026-09-24': ['Sofía', 'Elías'],
+  }
+  const W4: Record<string, Pair> = {
+    '2026-09-28': ['Adrián', 'Javier D.'],
+    '2026-09-29': ['Bakr', 'Hugo'],
+    '2026-09-30': ['Aitana', 'Vittorio'],
+  }
+  // W5 está vacía en el Excel
+
+  // Mapeo Excel name → BD name (porque el Excel tiene acentos/abreviaturas)
+  const NAME_MAP: Record<string, string> = {
+    'Ángel': 'Angel',
+    'Adrián': 'Adrian',
+    'Elías': 'Elias',
+    'José G.': 'Jose G',
+    'Javier D.': 'Javi D',
+    'Javier G.': 'Javi G',
+    'Sofía': 'Sofía',
+    'Diego S.': 'Diego S',
+    'Diego V.': 'Diego V',
+  }
+
+  async function getUserId(name: string): Promise<string | null> {
+    const bdName = NAME_MAP[name] ?? name
+    const u = await db.user.findFirst({ where: { name: bdName } })
+    return u?.id ?? null
+  }
+
+  // Turnos por día de la semana (0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie)
+  function shiftsForDate(dateStr: string): string[] {
+    const d = new Date(dateStr + 'T12:00:00')
+    const dow = d.getDay() // 0..6
+    if (dow === 1 || dow === 2 || dow === 4) return ['Mañana LMX', 'Tarde LMX']
+    if (dow === 3) return ['Mediodía X', 'Tarde X']
+    if (dow === 5) return ['Mediodía V']
+    return []
+  }
+
+  let created = 0
+  const ALL_WEEKS = [W1, W2, W3, W4]
+  for (const week of ALL_WEEKS) {
+    for (const [date, pair] of Object.entries(week)) {
+      const [cocinero1, camarero1] = pair
+      const shiftNames = shiftsForDate(date)
+      const cocineroId = await getUserId(cocinero1)
+      const camareroId = await getUserId(camarero1)
+      if (!cocineroId || !camareroId) {
+        console.log(`[ensureDb] SKIP ${date}: usuario no encontrado (${cocinero1} o ${camarero1})`)
+        continue
+      }
+      for (let i = 0; i < shiftNames.length; i++) {
+        const shiftName = shiftNames[i]
+        const shiftId = shiftByName[shiftName]
+        if (!shiftId) continue
+        // Primer turno: cocinero1 = cocinero, camarero1 = camarero
+        // Segundo turno (si existe): se intercambian roles
+        const isSecond = i === 1
+        const role1 = isSecond ? 'CAMARERO' : 'COCINERO'
+        const role2 = isSecond ? 'COCINERO' : 'CAMARERO'
+        // Borrar asignaciones previas para esa fecha/shift
+        await db.shiftAssignment.deleteMany({ where: { date, shiftId } })
+        await db.shiftAssignment.create({
+          data: { date, shiftId, userId: cocineroId, role: role1 },
+        })
+        await db.shiftAssignment.create({
+          data: { date, shiftId, userId: camareroId, role: role2 },
+        })
+        created += 2
+      }
+    }
+  }
+  console.log(`[ensureDb] seed V1 aplicado (16 users + 42 productos + 48 MP + ${created} asignaciones de turno)`)
   return
 }
