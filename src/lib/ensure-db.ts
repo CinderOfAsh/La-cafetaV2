@@ -207,105 +207,180 @@ async function doInit(db: PrismaClient) {
     await db.$executeRawUnsafe(stmt)
   }
 
-  // 2) Seed: usuarios con upsert (email único) → nunca duplica
-  const admin = await db.user.upsert({
-    where: { email: 'bullerre@lacafeta.com' },
-    update: { role: 'ADMIN' },
-    create: { name: 'Bullerre', email: 'bullerre@lacafeta.com', role: 'ADMIN' },
-  })
-  const angel = await db.user.upsert({
-    where: { email: 'angel@lacafeta.com' },
-    update: {},
-    create: { name: 'Angel', email: 'angel@lacafeta.com', role: 'CAMARERO' },
-  })
-  const aitana = await db.user.upsert({
-    where: { email: 'aitana@lacafeta.com' },
-    update: {},
-    create: { name: 'Aitana', email: 'aitana@lacafeta.com', role: 'COCINERO' },
-  })
+  // 2) FORCE RESEED (opt-in): si FORCE_RESEED=true, BORRA todo el contenido de las
+  // tablas "de seed" y deja que el bloque siguiente las vuelva a crear.
+  // ⚠ DESTRUCTIVO. Solo usar cuando quieras resetear la BD a un estado conocido.
+  // En Hostinger se mete como env var, redespliegas, y luego la quitas.
+  if (process.env.FORCE_RESEED === 'true') {
+    console.log('[ensureDb] FORCE_RESEED=true → borrando tablas de seed antes de re-sembrar')
+    // Orden: hijas primero (FK), madres al final
+    await db.purchaseItem.deleteMany({})
+    await db.purchase.deleteMany({})
+    await db.saleItem.deleteMany({})
+    await db.saleTransaction.deleteMany({})
+    await db.productRecipe.deleteMany({})
+    await db.product.deleteMany({})
+    await db.rawMaterial.deleteMany({})
+    await db.user.deleteMany({})
+    // NO borramos Shift/Protocol/ShiftAssignment (datos estructurales creados
+    // por el usuario desde la web; descomenta si quieres resetearlos también).
+    // await db.protocolCompletion.deleteMany({})
+    // await db.protocol.deleteMany({})
+    // await db.shiftSwap.deleteMany({})
+    // await db.shiftAssignment.deleteMany({})
+    // await db.shift.deleteMany({})
+  }
 
-  // 3) Datos de demo: solo si no hay productos todavía (estado parcial → completa)
+  // 3) Seed: usuarios legacy (Bullerre/Angel/Aitana) — solo si NO estamos en reseed
+  // (en reseed, el bloque posterior los crea desde cero con los 16 del Excel).
+  if (process.env.FORCE_RESEED !== 'true') {
+    const admin = await db.user.upsert({
+      where: { email: 'bullerre@lacafeta.com' },
+      update: { role: 'ADMIN' },
+      create: { name: 'Bullerre', email: 'bullerre@lacafeta.com', role: 'ADMIN' },
+    })
+    const angel = await db.user.upsert({
+      where: { email: 'angel@lacafeta.com' },
+      update: {},
+      create: { name: 'Angel', email: 'angel@lacafeta.com', role: 'CAMARERO' },
+    })
+    const aitana = await db.user.upsert({
+      where: { email: 'aitana@lacafeta.com' },
+      update: {},
+      create: { name: 'Aitana', email: 'aitana@lacafeta.com', role: 'COCINERO' },
+    })
+    void admin; void angel; void aitana
+  }
+
+  // 4) Si la BD está totalmente vacía (estado post-reseed o BD fresca), sembramos
+  // el catálogo real de Bakr (16 users + 42 productos + 48 MP).
+  // Si ya hay productos, no tocamos nada.
   const productCount = await db.product.count()
   if (productCount > 0) return
 
-  const [bocadillo, kafe, agua] = await Promise.all([
-    db.product.create({
-      data: { name: 'Bocadillo de lomo y queso', price: 4, tags: JSON.stringify(['Bocadillos', 'Comida']) },
-    }),
-    db.product.create({
-      data: { name: 'Kafe Kn Leche Grande', price: 1.5, tags: JSON.stringify(['Bebidas', 'Caliente', 'Cafe']) },
-    }),
-    db.product.create({
-      data: { name: 'Agua', price: 1, tags: JSON.stringify(['Bebidas', 'Agua']) },
-    }),
-  ])
+  // ===== Seed real (antes solo había 3 productos demo aquí) =====
+  const IMG_PRODUCTO =
+    'https://imgs.search.brave.com/1KFqvjAAgwOVTHmBvYMg-W705_4tusJKwBRTgf1LLsE/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9paDEu/cmVkYnViYmxlLm5l/dC9pbWFnZS41NDE1/NTk4MzI3LjIzOTcv/cmFmLDM2MHgzNjAs/MDc1LHQsZmFmYWZh/OmNhNDQzZjQ3ODYu/dTUuanBn'
 
-  await db.shift.createMany({
-    data: [
-      { name: 'Mañana', startTime: '08:45', endTime: '13:00', daysOfWeek: '1,2,3,4,5' },
-      { name: 'Tarde', startTime: '13:00', endTime: '17:00', daysOfWeek: '1,2,3,4,5' },
-    ],
-  })
+  const USERS = [
+    { name: 'Bakr',    email: 'mohammadbakr.ouahid@alumni.mondragon.edu', role: 'ADMIN',    password: '0009' },
+    { name: 'Aitana',  email: 'aitana.gonzalez@alumni.mondragon.edu',     role: 'EMPLOYEE', password: ''    },
+    { name: 'Angel',   email: 'angel.rodriguez@alumni.mondragon.edu',     role: 'EMPLOYEE', password: ''    },
+    { name: 'Adrian',  email: 'adrian.navarro@alumni.mondragon.edu',      role: 'EMPLOYEE', password: ''    },
+    { name: 'Claudia', email: 'claudia.gordo@alumni.mondragon.edu',       role: 'EMPLOYEE', password: ''    },
+    { name: 'Elias',   email: 'eliasbenjamin.vicen@alumni.mondragon.edu', role: 'EMPLOYEE', password: ''    },
+    { name: 'Diego S', email: 'diego.sanchezg@alumni.mondragon.edu',      role: 'EMPLOYEE', password: ''    },
+    { name: 'Diego V', email: 'diego.villasante@alumni.mondragon.edu',    role: 'EMPLOYEE', password: ''    },
+    { name: 'Hugo',    email: 'hugonicholas.abrey@alumni.mondragon.edu',  role: 'EMPLOYEE', password: ''    },
+    { name: 'Jose G',  email: 'josefrancisco.gomez@alumni.mondragon.edu',role: 'EMPLOYEE', password: ''    },
+    { name: 'Javi C',  email: 'javier.diazn@alumni.mondragon.edu',        role: 'EMPLOYEE', password: ''    },
+    { name: 'Javi M',  email: 'franciscojavier.garg@alumni.mondragon.edu',role: 'EMPLOYEE', password: ''    },
+    { name: 'Kawtar',  email: 'kawtar.mellass@alumni.mondragon.edu',      role: 'EMPLOYEE', password: ''    },
+    { name: 'Luca',    email: 'luca.rodriguez@alumni.mondragon.edu',      role: 'EMPLOYEE', password: ''    },
+    { name: 'Sofía',   email: 'sofia.villabrille@alumni.mondragon.edu',   role: 'EMPLOYEE', password: ''    },
+    { name: 'Vittorio',email: 'vittorioniccola.camp@alumni.mondragon.edu',role: 'EMPLOYEE', password: ''    },
+  ]
 
-  await db.protocol.createMany({
-    data: [
-      { type: 'APERTURA', name: 'Apertura general cantina', steps: JSON.stringify(['Encender máquina', 'Montar caja', 'Revisar stock']) },
-      { type: 'CIERRE', name: 'Cierre general cantina', steps: JSON.stringify(['Arqueo de caja', 'Limpiar zona', 'Apagar máquina']) },
-    ],
-  })
-
-  await db.rawMaterial.createMany({
-    data: [
-      { name: 'Barra de pan', unit: 'ud', stock: 4, minStock: 5 },
-      { name: 'Lomo', unit: 'loncha', stock: 40, minStock: 10 },
-      { name: 'Queso', unit: 'loncha', stock: 25, minStock: 10 },
-      { name: 'Leche semi', unit: 'L', stock: 11.5, minStock: 6 },
-    ],
-  })
-
-  const pan = await db.rawMaterial.findFirst({ where: { name: 'Barra de pan' } })
-  const lomo = await db.rawMaterial.findFirst({ where: { name: 'Lomo' } })
-  const queso = await db.rawMaterial.findFirst({ where: { name: 'Queso' } })
-  if (pan && lomo && queso) {
-    await db.productRecipe.createMany({
-      data: [
-        { productId: bocadillo.id, rawMaterialId: pan.id, quantity: 1 },
-        { productId: bocadillo.id, rawMaterialId: lomo.id, quantity: 2 },
-        { productId: bocadillo.id, rawMaterialId: queso.id, quantity: 1 },
-      ],
+  // Upsert para no duplicar si se reinicia la BD parcialmente
+  for (const u of USERS) {
+    await db.user.upsert({
+      where: { email: u.email },
+      update: { name: u.name, role: u.role, password: u.password, isActive: true },
+      create: { name: u.name, email: u.email, role: u.role, password: u.password, isActive: true, customFields: '{}' },
     })
   }
 
-  // Un par de ventas para que el dashboard no salga vacío
-  const saleTime = new Date(Date.now() - 2 * 60 * 60 * 1000)
-  await db.saleTransaction.create({
-    data: {
-      createdAt: saleTime,
-      employeeId: angel.id,
-      total: 9.5,
-      paymentMethod: 'cash',
-      items: {
-        create: [
-          { productId: bocadillo.id, productName: bocadillo.name, quantity: 2, price: 4, priority: 0, status: 'DELIVERED' },
-          { productId: kafe.id, productName: kafe.name, quantity: 1, price: 1.5, priority: 1, status: 'DELIVERED' },
-        ],
-      },
-    },
-  })
-  await db.saleTransaction.create({
-    data: {
-      createdAt: saleTime,
-      employeeId: aitana.id,
-      total: 4.5,
-      paymentMethod: 'card',
-      items: {
-        create: [
-          { productId: kafe.id, productName: kafe.name, quantity: 1, price: 1.5, priority: 0, status: 'DELIVERED' },
-          { productId: agua.id, productName: agua.name, quantity: 3, price: 1, priority: 1, status: 'DELIVERED' },
-        ],
-      },
-    },
-  })
+  const PRODUCTS: { name: string; price: number; tags: string[]; imageUrl: string | null }[] = [
+    { name: 'Sandwich pavo y queso',          price: 2.50, tags: ['bocadillo', 'caliente', 'salado'],       imageUrl: IMG_PRODUCTO },
+    { name: 'Tostada mantequilla y mermelada',price: 2.00, tags: ['bocadillo', 'dulce'],                    imageUrl: IMG_PRODUCTO },
+    { name: 'Tostada tomate y aceite',        price: 2.00, tags: ['bocadillo', 'salado'],                   imageUrl: IMG_PRODUCTO },
+    { name: 'Tostada jamón',                  price: 2.50, tags: ['bocadillo', 'salado'],                   imageUrl: IMG_PRODUCTO },
+    { name: 'Pincho tortilla',                price: 1.50, tags: ['bocadillo', 'salado'],                   imageUrl: IMG_PRODUCTO },
+    { name: 'Croissant a la plancha',         price: 1.50, tags: ['Croissant', 'dulce', 'salado', 'caliente'], imageUrl: IMG_PRODUCTO },
+    { name: 'Bocata lomo y queso',            price: 3.50, tags: ['bocadillo', 'salado'],                   imageUrl: IMG_PRODUCTO },
+    { name: 'Bocata jamón',                   price: 3.50, tags: ['bocadillo', 'salado'],                   imageUrl: IMG_PRODUCTO },
+    { name: 'Bocata tortilla',                price: 3.50, tags: ['bocadillo', 'salado'],                   imageUrl: IMG_PRODUCTO },
+    { name: 'Gofre',                          price: 2.50, tags: ['postre', 'dulce'],                       imageUrl: IMG_PRODUCTO },
+    { name: 'Croissant pavo y queso',         price: 2.50, tags: ['Croissant', 'dulce', 'salado'],         imageUrl: IMG_PRODUCTO },
+    { name: 'Pizza',                          price: 3.00, tags: ['caliente', 'bocadillo'],                 imageUrl: IMG_PRODUCTO },
+    { name: 'Palitos de queso',               price: 2.50, tags: ['frito', 'cliente', 'Jose_Adri_Aitana', 'comida de niños'], imageUrl: IMG_PRODUCTO },
+    { name: 'Café con leche pequeño',         price: 1.20, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'Café sin lactosa pequeño',       price: 1.20, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'Café americano pequeño',         price: 1.20, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'Café solo pequeño',              price: 1.20, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'ColaCao',                        price: 1.20, tags: ['bebida', 'caliente', 'frio', 'dulce'],   imageUrl: IMG_PRODUCTO },
+    { name: 'ColaCao sin lactosa',            price: 1.20, tags: ['bebida', 'caliente', 'frio', 'dulce'],   imageUrl: IMG_PRODUCTO },
+    { name: 'Café con leche grande',          price: 1.50, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'Café sin lactosa grande',        price: 1.50, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'Café americano grande',          price: 1.50, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'Café solo grande',               price: 1.50, tags: ['bebida', 'caliente', 'cafe'],            imageUrl: IMG_PRODUCTO },
+    { name: 'Té',                             price: 1.20, tags: ['bebida', 'caliente'],                    imageUrl: IMG_PRODUCTO },
+    { name: 'Agua',                           price: 1.00, tags: ['bebida', 'frio'],                        imageUrl: IMG_PRODUCTO },
+    { name: 'Coca-Cola',                      price: 1.20, tags: ['bebida', 'refresco', 'dulce', 'frio'],   imageUrl: IMG_PRODUCTO },
+    { name: 'Coca-Cola Zero',                 price: 1.20, tags: ['bebida', 'refresco', 'dulce', 'frio'],   imageUrl: IMG_PRODUCTO },
+    { name: 'Red Bull sin azúcar',            price: 1.70, tags: ['bebida', 'refresco', 'dulce', 'frio'],   imageUrl: IMG_PRODUCTO },
+    { name: 'Red Bull naranja',               price: 1.70, tags: ['bebida', 'refresco', 'dulce', 'frio'],   imageUrl: IMG_PRODUCTO },
+    { name: 'Red Bull blanco',                price: 1.70, tags: ['bebida', 'refresco', 'dulce', 'frio'],   imageUrl: IMG_PRODUCTO },
+    { name: 'Cerveza',                        price: 1.50, tags: ['bebida', 'refresco', 'agua bendita', 'frio'], imageUrl: IMG_PRODUCTO },
+    { name: 'Fanta de naranja',               price: 1.20, tags: ['bebida', 'refresco', 'dulce', 'frio'],   imageUrl: IMG_PRODUCTO },
+    { name: 'Aquarius de limón',              price: 1.20, tags: ['sofía', 'bebida', 'fria', 'dulce'],      imageUrl: IMG_PRODUCTO },
+    { name: 'Nestea',                         price: 1.20, tags: ['Sofía', 'bebida', 'fria', 'dulce'],      imageUrl: IMG_PRODUCTO },
+    { name: 'Pack desayuno sandwich',         price: 3.00, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2F7d30d51bf406648812f0c7ffaeb1ff42.1000x1000x1.png' },
+    { name: 'Pack desayuno tostada',          price: 2.70, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2Fee777db36c1e6a87809f3280c190ab9c.1000x1000x1.png' },
+    { name: 'Pack dulce',                     price: 3.25, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2F1bb36868bb2b7bb0b8b3dbc9c92ac62c.1000x1000x1.png' },
+    { name: 'Pack TLS',                       price: 2.25, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2Fa02e62a211860be7e9eeba1e4b05fb8b.1000x1000x1.jpg' },
+    { name: 'Pack comida lomo',               price: 4.75, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2F0f7f84ec4e47f6c89e9066225fbe16b0.1000x1000x1.png' },
+    { name: 'Pack comida tortilla',           price: 4.75, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2Fb30a054c6bc082c407f04b227b1cda2b.1000x1000x1.png' },
+    { name: 'Pack LEINN',                     price: 4.00, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2Fd5cfd7f6208861a053a51b3bbb62624c.1000x1000x1.png' },
+    { name: 'Pack Bakr',                      price: 3.00, tags: ['pack'], imageUrl: 'https://t2.genius.com/unsafe/504x0/https%3A%2F%2Fimages.genius.com%2F2037d9946a064f461b5c45eeb452fcac.1000x1000x1.png' },
+  ]
+  for (const p of PRODUCTS) {
+    const exists = await db.product.findFirst({ where: { name: p.name } })
+    if (!exists) {
+      await db.product.create({
+        data: {
+          name: p.name,
+          price: p.price,
+          tags: JSON.stringify(p.tags),
+          imageUrl: p.imageUrl,
+          isActive: true,
+          customFields: '{}',
+        },
+      })
+    }
+  }
 
-  console.log('[ensureDb] esquema creado y datos sembrados (admin: bullerre@lacafeta.com)')
+  const RAW = [
+    { name: 'pan de molde', unit: 'ud', minStock: 10 }, { name: 'pavo', unit: 'ud', minStock: 10 },
+    { name: 'queso en lonchas', unit: 'ud', minStock: 10 }, { name: 'pan para tostadas', unit: 'ud', minStock: 10 },
+    { name: 'mantequilla', unit: 'gramo', minStock: 10 }, { name: 'mermelada', unit: 'ud', minStock: 10 },
+    { name: 'jamon', unit: 'ud', minStock: 10 }, { name: 'tortilla', unit: 'ud', minStock: 10 },
+    { name: 'pan para pinchos', unit: 'ud', minStock: 10 }, { name: 'croissant', unit: 'ud', minStock: 10 },
+    { name: 'lomo', unit: 'ud', minStock: 10 }, { name: 'gofre', unit: 'ud', minStock: 10 },
+    { name: 'capsula de cafe doble', unit: 'ud', minStock: 10 }, { name: 'leche semi', unit: 'litro', minStock: 10 },
+    { name: 'leche sin lactosa', unit: 'litro', minStock: 10 }, { name: 'leche de avena', unit: 'litro', minStock: 10 },
+    { name: 'colacao', unit: 'ud', minStock: 10 }, { name: 'agua', unit: 'ud', minStock: 10 },
+    { name: 'coca-cola', unit: 'ud', minStock: 10 }, { name: 'coca-cola Zero', unit: 'ud', minStock: 10 },
+    { name: 'Red Bull sin azucar', unit: 'ud', minStock: 10 }, { name: 'Red Bull naranja', unit: 'ud', minStock: 10 },
+    { name: 'Red Bull blanco', unit: 'ud', minStock: 10 }, { name: 'cerveza', unit: 'ud', minStock: 10 },
+    { name: 'fanta naranja', unit: 'ud', minStock: 10 }, { name: 'te', unit: 'ud', minStock: 10 },
+    { name: 'aquarius de limon', unit: 'ud', minStock: 10 }, { name: 'Nestea', unit: 'ud', minStock: 10 },
+    { name: 'Pizza', unit: 'ud', minStock: 10 }, { name: 'palitos de queso', unit: 'ud', minStock: 10 },
+    { name: 'patatas', unit: 'ud', minStock: 10 }, { name: 'capsulas de cafe descafeinado', unit: 'ud', minStock: 10 },
+    { name: 'platos', unit: 'ud', minStock: 10 }, { name: 'vasos pequeños', unit: 'ud', minStock: 10 },
+    { name: 'vasos medianos', unit: 'ud', minStock: 10 }, { name: 'vasos grandes', unit: 'ud', minStock: 10 },
+    { name: 'tapas grandes', unit: 'ud', minStock: 10 }, { name: 'palillos', unit: 'ud', minStock: 10 },
+    { name: 'tenedor de madera', unit: 'ud', minStock: 10 }, { name: 'cuchara de madera', unit: 'ud', minStock: 10 },
+    { name: 'cuchillo de madera', unit: 'ud', minStock: 10 }, { name: 'papel de horno', unit: 'ud', minStock: 10 },
+    { name: 'pegatinas', unit: 'ud', minStock: 10 }, { name: 'papel film', unit: 'ud', minStock: 10 },
+    { name: 'servilletas', unit: 'ud', minStock: 10 },
+    { name: 'quitagrasas', unit: 'litro', minStock: 10 }, { name: 'jabon', unit: 'litro', minStock: 10 }, { name: 'balletas', unit: 'litro', minStock: 10 },
+  ]
+  for (const r of RAW) {
+    const exists = await db.rawMaterial.findFirst({ where: { name: r.name } })
+    if (!exists) await db.rawMaterial.create({ data: { name: r.name, unit: r.unit, stock: 0, minStock: r.minStock } })
+  }
+
+  console.log('[ensureDb] seed V1 aplicado (16 users + 42 productos + 48 materias primas)')
+  return
 }
