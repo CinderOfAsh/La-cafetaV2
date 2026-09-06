@@ -55,5 +55,11 @@ server.log
 # La Cafeta — datos locales y artefactos de prueba
 db/*.db
 db/*.db-journal
+/prisma/*.db
+/prisma/*.db-journal
 /upload/
 /download/
+
+# Next.js 16 — auto-generados por next dev (metadata para agentes IA)
+/AGENTS.md
+/CLAUDE.md
