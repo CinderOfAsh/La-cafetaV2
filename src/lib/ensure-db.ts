@@ -434,12 +434,13 @@ async function doInit(db: PrismaClient) {
     },
   })
 
-  // ===== 8) Crear los 5 turnos de la Cafeta =====
+  // ===== 8) Crear los turnos de la Cafeta =====
+  // Turnos LMX-J (8:45-13 / 13-17) + X cortos (12-14 / 14-17) + V corto (12-14)
   const SHIFTS = [
     { name: 'Mañana LMX',  startTime: '08:45', endTime: '13:00', daysOfWeek: '1,2,4' },     // L, M, J
     { name: 'Tarde LMX',   startTime: '13:00', endTime: '17:00', daysOfWeek: '1,2,4' },     // L, M, J
-    { name: 'Mediodía X',   startTime: '12:00', endTime: '15:00', daysOfWeek: '3' },         // X
-    { name: 'Tarde X',     startTime: '15:00', endTime: '17:00', daysOfWeek: '3' },         // X
+    { name: 'Mediodía X',  startTime: '12:00', endTime: '14:00', daysOfWeek: '3' },         // X
+    { name: 'Tarde X',     startTime: '14:00', endTime: '17:00', daysOfWeek: '3' },         // X
     { name: 'Mediodía V',  startTime: '12:00', endTime: '14:00', daysOfWeek: '5' },         // V
   ]
   const shiftByName: Record<string, string> = {}
@@ -447,106 +448,144 @@ async function doInit(db: PrismaClient) {
     const exists = await db.shift.findFirst({ where: { name: s.name } })
     if (exists) {
       shiftByName[s.name] = exists.id
+      // Actualizar horarios por si cambiaron
+      await db.shift.update({ where: { id: exists.id }, data: s })
     } else {
       const created = await db.shift.create({ data: s })
       shiftByName[s.name] = created.id
     }
   }
 
-  // ===== 9) Asignaciones de las 5 semanas de septiembre =====
-  // Estructura por día: lista de [nombre_persona1, nombre_persona2].
-  // Primera persona = COCINERO, segunda = CAMARERO.
-  // En el segundo turno del día se intercambian roles.
-  // Solo metemos septiembre (W1-W5) que es lo que está completo en el Excel.
-  type Pair = [string, string] // [cocinero turno1, camarero turno1]
-  const W1: Record<string, Pair> = {
-    '2026-09-07': ['Bakr', 'Hugo'],          // L
-    '2026-09-08': ['Javier G.', 'Ángel'],    // M
-    '2026-09-09': ['Aitana', 'Vittorio'],    // X
-    '2026-09-10': ['Luca', 'Kawtar'],        // J
-    // V (2026-09-11) — sin dato en W1
-  }
-  const W2: Record<string, Pair> = {
-    '2026-09-14': ['Sofía', 'Elías'],
-    '2026-09-15': ['Claudia', 'Diego V'],
-    '2026-09-16': ['Adrián', 'Javier D.'],
-    '2026-09-17': ['José G.', 'Diego S.'],
-  }
-  const W3: Record<string, Pair> = {
-    '2026-09-21': ['Javier G.', 'Ángel'],
-    '2026-09-22': ['Luca', 'Kawtar'],
-    '2026-09-23': ['Claudia', 'Diego V'],
-    '2026-09-24': ['Sofía', 'Elías'],
-  }
-  const W4: Record<string, Pair> = {
-    '2026-09-28': ['Adrián', 'Javier D.'],
-    '2026-09-29': ['Bakr', 'Hugo'],
-    '2026-09-30': ['Aitana', 'Vittorio'],
-  }
-  // W5 está vacía en el Excel
+  // ===== 9) Asignaciones por ciclo rotativo =====
+  // 9 turnos por semana, 8 parejas. La pareja que abre la semana (lunes mañana)
+  // tiene DOBLE turno (también hace el viernes). Las demás tienen 1 turno.
+  // Cada semana todas las parejas rotan un puesto.
+  //
+  // Rotación de roles: la primera vez que una pareja tiene un turno, el primero
+  // es cocinero y el segundo camarero. La siguiente vez que la misma pareja
+  // tenga turno (sea otro día u otra semana), se invierten los roles. Así,
+  // cada par de apariciones de la pareja los roles cambian.
+  //
+  // Orden del ciclo (1 → 8):
+  //   1. BAKR & HUGO A.      → L mañana + V (doble)
+  //   2. CLAUDIA & DIEGO V    → L tarde
+  //   3. JAVIER G. & ÁNGEL    → Mañana del día siguiente
+  //   4. ADRIÁN & JAVIER D.   → Tarde
+  //   5. AITANA & VITTORIO    → X mañana
+  //   6. JOSÉ G. & DIEGO S.   → X tarde
+  //   7. LUCA & KAWTAR        → J mañana
+  //   8. SOFÍA & ELÍAS        → J tarde
+  type Pair = [string, string] // [cocinero, camarero] (en su primera aparición)
+  const PAIR_ORDER: Pair[] = [
+    ['Bakr', 'Hugo'],
+    ['Claudia', 'Diego V'],
+    ['Javi G', 'Angel'],
+    ['Adrian', 'Javi D'],
+    ['Aitana', 'Vittorio'],
+    ['Jose G', 'Diego S'],
+    ['Luca', 'Kawtar'],
+    ['Sofía', 'Elias'],
+  ]
 
-  // Mapeo Excel name → BD name (porque el Excel tiene acentos/abreviaturas)
-  const NAME_MAP: Record<string, string> = {
-    'Ángel': 'Angel',
-    'Adrián': 'Adrian',
-    'Elías': 'Elias',
-    'José G.': 'Jose G',
-    'Javier D.': 'Javi D',
-    'Javier G.': 'Javi G',
-    'Sofía': 'Sofía',
-    'Diego S.': 'Diego S',
-    'Diego V.': 'Diego V',
-  }
-
-  async function getUserId(name: string): Promise<string | null> {
-    const bdName = NAME_MAP[name] ?? name
-    const u = await db.user.findFirst({ where: { name: bdName } })
-    return u?.id ?? null
+  // Mapeo de cómo se distribuyen los 8 puestos a los 9 turnos
+  // (la posición 1 cubre 2 turnos: el primero y el del viernes)
+  const POSITION_TO_SHIFT_INDEX: Record<number, number[]> = {
+    1: [0, 8],   // L mañana (turno 0) + V (turno 8)
+    2: [1],      // L tarde (turno 1)
+    3: [2],      // Mañana (turno 2)
+    4: [3],      // Tarde (turno 3)
+    5: [4],      // X mañana (turno 4)
+    6: [5],      // X tarde (turno 5)
+    7: [6],      // J mañana (turno 6)
+    8: [7],      // J tarde (turno 7)
   }
 
-  // Turnos por día de la semana (0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie)
-  function shiftsForDate(dateStr: string): string[] {
-    const d = new Date(dateStr + 'T12:00:00')
-    const dow = d.getDay() // 0..6
-    if (dow === 1 || dow === 2 || dow === 4) return ['Mañana LMX', 'Tarde LMX']
-    if (dow === 3) return ['Mediodía X', 'Tarde X']
-    if (dow === 5) return ['Mediodía V']
-    return []
+  // Los 9 turnos en orden cronológico dentro de la semana
+  // Cada entrada: { day: 0..6, shiftName }
+  const WEEKLY_TURNS: { day: number; shiftName: string }[] = [
+    { day: 1, shiftName: 'Mañana LMX' },  // 0: L mañana
+    { day: 1, shiftName: 'Tarde LMX' },   // 1: L tarde
+    { day: 2, shiftName: 'Mañana LMX' },  // 2: Mañana
+    { day: 2, shiftName: 'Tarde LMX' },   // 3: Tarde
+    { day: 3, shiftName: 'Mediodía X' },  // 4: X mañana
+    { day: 3, shiftName: 'Tarde X' },    // 5: X tarde
+    { day: 4, shiftName: 'Mañana LMX' },  // 6: J mañana
+    { day: 4, shiftName: 'Tarde LMX' },   // 7: J tarde
+    { day: 5, shiftName: 'Mediodía V' },  // 8: V
+  ]
+
+  // Para cada semana, devuelve las parejas rotadas.
+  // semana 0: BAKR & HUGO abren; semana 1: CLAUDIA & DIEGO abren; etc.
+  function getPairsForWeek(weekIndex: number): Pair[] {
+    const rotated: Pair[] = []
+    for (let i = 0; i < PAIR_ORDER.length; i++) {
+      rotated.push(PAIR_ORDER[(i + weekIndex) % PAIR_ORDER.length])
+    }
+    return rotated
   }
 
-  let created = 0
-  const ALL_WEEKS = [W1, W2, W3, W4]
-  for (const week of ALL_WEEKS) {
-    for (const [date, pair] of Object.entries(week)) {
-      const [cocinero1, camarero1] = pair
-      const shiftNames = shiftsForDate(date)
-      const cocineroId = await getUserId(cocinero1)
-      const camareroId = await getUserId(camarero1)
-      if (!cocineroId || !camareroId) {
-        console.log(`[ensureDb] SKIP ${date}: usuario no encontrado (${cocinero1} o ${camarero1})`)
-        continue
-      }
-      for (let i = 0; i < shiftNames.length; i++) {
-        const shiftName = shiftNames[i]
-        const shiftId = shiftByName[shiftName]
-        if (!shiftId) continue
-        // Primer turno: cocinero1 = cocinero, camarero1 = camarero
-        // Segundo turno (si existe): se intercambian roles
-        const isSecond = i === 1
-        const role1 = isSecond ? 'CAMARERO' : 'COCINERO'
-        const role2 = isSecond ? 'COCINERO' : 'CAMARERO'
-        // Borrar asignaciones previas para esa fecha/shift
-        await db.shiftAssignment.deleteMany({ where: { date, shiftId } })
-        await db.shiftAssignment.create({
-          data: { date, shiftId, userId: cocineroId, role: role1 },
-        })
-        await db.shiftAssignment.create({
-          data: { date, shiftId, userId: camareroId, role: role2 },
-        })
-        created += 2
+  // Construir la lista completa de (semana, día, pareja, shiftName) en orden
+  // cronológico global. Necesitamos este orden para asignar roles alternados.
+  const startMonday = new Date('2026-09-07T00:00:00')
+  const NUM_WEEKS = 5
+  const FULL_PLAN: { date: string; shiftName: string; pair: Pair }[] = []
+  for (let w = 0; w < NUM_WEEKS; w++) {
+    const monday = new Date(startMonday)
+    monday.setDate(monday.getDate() + w * 7)
+    const pairsThisWeek = getPairsForWeek(w)
+    for (const [position, turnIndices] of Object.entries(POSITION_TO_SHIFT_INDEX)) {
+      const posNum = parseInt(position, 10)
+      const pair = pairsThisWeek[posNum - 1]
+      for (const turnIdx of turnIndices) {
+        const turn = WEEKLY_TURNS[turnIdx]
+        const date = new Date(monday)
+        date.setDate(date.getDate() + (turn.day - 1))
+        // Usar sv-SE (formato ISO local) para evitar el off-by-one de UTC
+        const dateStr = date.toLocaleDateString('sv-SE')
+        FULL_PLAN.push({ date: dateStr, shiftName: turn.shiftName, pair })
       }
     }
   }
+
+  // Borrar todas las asignaciones desde el lunes 7-sep para empezar limpio
+  const startStr = startMonday.toLocaleDateString('sv-SE')
+  await db.shiftAssignment.deleteMany({
+    where: { date: { gte: startStr } },
+  })
+
+  // Asignar roles alternando por aparición de la pareja
+  // Para cada aparición N de una pareja (empezando en 0):
+  //   - Si N es par → [cocinero, camarero] (orden original de la pareja)
+  //   - Si N es impar → [camarero, cocinero] (roles invertidos)
+  let created = 0
+  const pairAppearances = new Map<string, number>()
+  for (const plan of FULL_PLAN) {
+    const pairKey = plan.pair.join('|')
+    const appearanceIdx = pairAppearances.get(pairKey) ?? 0
+    pairAppearances.set(pairKey, appearanceIdx + 1)
+
+    const inverted = appearanceIdx % 2 === 1
+    const [first, second] = inverted ? [plan.pair[1], plan.pair[0]] : plan.pair
+    const roles = inverted ? ['CAMARERO', 'COCINERO'] : ['COCINERO', 'CAMARERO']
+
+    const [u1, u2] = await Promise.all([
+      db.user.findFirst({ where: { name: first } }),
+      db.user.findFirst({ where: { name: second } }),
+    ])
+    const shift = await db.shift.findFirst({ where: { name: plan.shiftName } })
+    if (!u1 || !u2 || !shift) {
+      console.log(`[ensureDb] SKIP ${plan.date} ${plan.shiftName}: usuario o shift no encontrado (${first}, ${second})`)
+      continue
+    }
+    await db.shiftAssignment.create({
+      data: { date: plan.date, shiftId: shift.id, userId: u1.id, role: roles[0] },
+    })
+    await db.shiftAssignment.create({
+      data: { date: plan.date, shiftId: shift.id, userId: u2.id, role: roles[1] },
+    })
+    created += 2
+  }
+
   console.log(`[ensureDb] seed V1 aplicado (16 users + 42 productos + 48 MP + ${created} asignaciones de turno)`)
   return
 }
