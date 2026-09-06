@@ -3,22 +3,9 @@ import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
 import { createToken } from '@/lib/auth'
 
-// POST — login como ADMIN protegido por contraseña.
-// Contraseña del PANEL DE ADMIN (no del usuario), definida en env var
-// ADMIN_PANEL_PASSWORD. Default: "Horche".
-export async function POST(req: Request) {
+// GET — auto-login as the first ADMIN user (no password, per spec)
+export async function GET() {
   try {
-    const expected = process.env.ADMIN_PANEL_PASSWORD ?? 'Horche'
-    const body = await req.json().catch(() => ({}))
-    const provided = typeof body.password === 'string' ? body.password : ''
-
-    if (provided !== expected) {
-      return NextResponse.json(
-        { error: 'Contraseña incorrecta' },
-        { status: 401 }
-      )
-    }
-
     const admin = await db.user.findFirst({
       where: { role: 'ADMIN' },
     })
