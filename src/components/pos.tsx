@@ -30,8 +30,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Card, ModalShell, Badge, LoadingBlock, EmptyState } from '@/components/shared'
-import { BookmarkTabs } from '@/components/shared'
+import { Card, ModalShell, Badge, LoadingBlock, EmptyState, TagTabsMulti } from '@/components/shared'
 import { get, post, put, del } from '@/lib/api'
 import { toast } from 'sonner'
 import { eur } from '@/lib/format'
@@ -51,7 +50,7 @@ interface SandboxComanda {
 export function SandboxPizarra({ products }: { products: Product[] }) {
   const [order, setOrder] = useState<string[]>(() => products.map((p) => p.id))
   const [search, setSearch] = useState('')
-  const [activeTag, setActiveTag] = useState('todos')
+  const [activeTags, setActiveTags] = useState<string[]>([])  // multi-tag
   const [paymentModal, setPaymentModal] = useState<Product | null>(null)
   const [protocolModal, setProtocolModal] = useState<Protocol | null>(null)
   const [comandas, setComandas] = useState<SandboxComanda[]>([])
@@ -68,7 +67,7 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
   const tags = useMemo(() => {
     const s = new Set<string>()
     for (const p of products) for (const t of p.tags || []) s.add(t)
-    return ['todos', ...Array.from(s).sort()]
+    return Array.from(s).sort()
   }, [products])
 
   const filtered = useMemo(() => {
@@ -76,9 +75,21 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
     return order
       .map((id) => products.find((p) => p.id === id))
       .filter(Boolean)
-      .filter((p) => (activeTag === 'todos' ? true : (p!.tags || []).includes(activeTag)))
+      .filter((p) => {
+        // Multi-tag: el producto sale si tiene AL MENOS UNA de las tags activas
+        // (lógica OR). Si no hay tags activas, se muestran todos.
+        if (activeTags.length === 0) return true
+        const productTags = p!.tags || []
+        return activeTags.some((t) => productTags.includes(t))
+      })
       .filter((p) => (q ? p!.name.toLowerCase().includes(q) : true)) as Product[]
-  }, [order, products, search, activeTag])
+  }, [order, products, search, activeTags])
+
+  function toggleTag(tag: string) {
+    setActiveTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -162,11 +173,7 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
       {/* Pizarra */}
       <div>
-        <BookmarkTabs
-          active={activeTag}
-          onChange={setActiveTag}
-          tabs={tags.map((t) => ({ id: t, label: t === 'todos' ? 'Todos' : t }))}
-        />
+        <TagTabsMulti allTags={tags} activeTags={activeTags} onToggle={toggleTag} />
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
@@ -192,7 +199,7 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext
-              items={search || activeTag !== 'todos' ? [] : filtered.map((p) => p.id)}
+              items={search || activeTags.length > 0 ? [] : filtered.map((p) => p.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -202,7 +209,7 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
                     <ProductCard
                       key={p.id}
                       product={p}
-                      draggable={!search && activeTag === 'todos'}
+                      draggable={!search && activeTags.length === 0}
                       hasProtocol={!!productProtocol}
                       onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
                       onClick={() => setPaymentModal(p)}
@@ -502,7 +509,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [order, setOrder] = useState<string[]>([])
   const [search, setSearch] = useState('')
-  const [activeTag, setActiveTag] = useState('todos')
+  const [activeTags, setActiveTags] = useState<string[]>([])  // multi-tag
   const [paymentModal, setPaymentModal] = useState<Product | null>(null)
   const [protocolModal, setProtocolModal] = useState<Protocol | null>(null)
   const [comandas, setComandas] = useState<LiveComanda[]>([])
@@ -569,7 +576,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
   const tags = useMemo(() => {
     const s = new Set<string>()
     for (const p of products) for (const t of p.tags || []) s.add(t)
-    return ['todos', ...Array.from(s).sort()]
+    return Array.from(s).sort()
   }, [products])
 
   const filtered = useMemo(() => {
@@ -577,9 +584,21 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
     return order
       .map((id) => products.find((p) => p.id === id))
       .filter(Boolean)
-      .filter((p) => (activeTag === 'todos' ? true : (p!.tags || []).includes(activeTag)))
+      .filter((p) => {
+        // Multi-tag: el producto sale si tiene AL MENOS UNA de las tags activas
+        // (lógica OR). Si no hay tags activas, se muestran todos.
+        if (activeTags.length === 0) return true
+        const productTags = p!.tags || []
+        return activeTags.some((t) => productTags.includes(t))
+      })
       .filter((p) => (q ? p!.name.toLowerCase().includes(q) : true)) as Product[]
-  }, [order, products, search, activeTag])
+  }, [order, products, search, activeTags])
+
+  function toggleTag(tag: string) {
+    setActiveTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -674,11 +693,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
       {/* Pizarra */}
       <div>
-        <BookmarkTabs
-          active={activeTag}
-          onChange={setActiveTag}
-          tabs={tags.map((t) => ({ id: t, label: t === 'todos' ? 'Todos' : t }))}
-        />
+        <TagTabsMulti allTags={tags} activeTags={activeTags} onToggle={toggleTag} />
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
@@ -706,7 +721,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext
-              items={!search && activeTag === 'todos' ? filtered.map((p) => p.id) : []}
+              items={!search && activeTags.length === 0 ? filtered.map((p) => p.id) : []}
               strategy={verticalListSortingStrategy}
             >
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -716,7 +731,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
                     <ProductCard
                       key={p.id}
                       product={p}
-                      draggable={!search && activeTag === 'todos'}
+                      draggable={!search && activeTags.length === 0}
                       hasProtocol={!!productProtocol}
                       onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
                       onClick={() => setPaymentModal(p)}

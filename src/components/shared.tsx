@@ -1,7 +1,8 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { LoadingBlock, EmptyState, Spinner, PageHeader } from '@/components/ui-bits'
+import { Plus, X } from 'lucide-react'
 
 export { LoadingBlock, EmptyState, Spinner, PageHeader }
 
@@ -38,6 +39,111 @@ export function BookmarkTabs({
           )}
         </button>
       ))}
+    </div>
+  )
+}
+
+// Etiquetas por defecto que siempre se muestran en el POS
+export const DEFAULT_POS_TAGS = ['Bocadillo', 'Bebida', 'Caliente', 'Frio', 'Salado', 'Dulce']
+
+export function TagTabsMulti({
+  allTags,
+  activeTags,
+  onToggle,
+}: {
+  allTags: string[]               // TODAS las etiquetas que existen en los productos
+  activeTags: string[]            // etiquetas actualmente seleccionadas (multi)
+  onToggle: (tag: string) => void  // toggle on/off
+}) {
+  const [open, setOpen] = useState(false)
+
+  // Etiquetas visibles siempre (default + las que el usuario ha "fijado" añadiéndolas)
+  const pinned = activeTags.filter((t) => !DEFAULT_POS_TAGS.includes(t))
+  const visibleDefault = DEFAULT_POS_TAGS
+  const allVisible = [...visibleDefault, ...pinned]
+
+  // Etiquetas ocultas (las que existen pero el usuario no ha añadido)
+  const hidden = allTags.filter((t) => !allVisible.includes(t))
+
+  // Función interna: hace toggle y, si la etiqueta era hidden, la "fija" como pinned
+  // onToggle ya gestiona el estado global de activeTags; aquí solo nos aseguramos
+  // de que cuando se activa una etiqueta hidden, se abra el menú brevemente
+  // para confirmar visualmente.
+  function handleAddFromHidden(tag: string) {
+    if (!activeTags.includes(tag)) {
+      onToggle(tag)  // la activa (la pone visible)
+    }
+    // Mantenemos el menú abierto para que pueda añadir varias seguidas
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-3">
+      {allVisible.map((tag) => {
+        const isActive = activeTags.includes(tag)
+        const isPinned = pinned.includes(tag)
+        return (
+          <div key={tag} className="flex items-center">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onToggle(tag)}
+              className={`bookmark-tab ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
+              title={isPinned ? 'Click para quitar (vuelve a estar oculta)' : 'Click para activar filtro'}
+            >
+              {tag}
+            </button>
+            {isPinned && (
+              <button
+                type="button"
+                onClick={() => onToggle(tag)}  // la quita de activeTags → vuelve a estar oculta
+                aria-label={`Quitar ${tag}`}
+                className="ml-1 p-1 rounded hover:bg-accent text-muted-foreground"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )
+      })}
+      {/* Botón + para abrir el desplegable de etiquetas ocultas */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-label="Añadir etiqueta"
+          className="bookmark-tab add-tag"
+          title="Añadir etiqueta"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+        {open && hidden.length > 0 && (
+          <div
+            className="absolute z-20 mt-2 left-0 bg-card border border-border rounded-md shadow-lg p-2 min-w-[160px]"
+            role="menu"
+          >
+            {hidden.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                role="menuitem"
+                onClick={() => handleAddFromHidden(tag)}
+                className="block w-full text-left px-3 py-1.5 rounded hover:bg-accent text-sm"
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
+        {open && hidden.length === 0 && (
+          <div
+            className="absolute z-20 mt-2 left-0 bg-card border border-border rounded-md shadow-lg p-3 min-w-[160px] text-xs text-muted-foreground"
+          >
+            No hay más etiquetas
+          </div>
+        )}
+      </div>
     </div>
   )
 }
