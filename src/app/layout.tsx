@@ -43,7 +43,7 @@ export default function RootLayout({
             {children}
           </div>
           <Toaster />
-          <SonnerToaster position="top-right" richColors closeButton />
+          <SonnerToaster position="top-right" richColors closeButton duration={1300} />
         </ThemeProvider>
       </body>
     </html>

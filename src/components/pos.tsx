@@ -1,6 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+
+// Normaliza texto para búsqueda: minúsculas + sin tildes/diacríticos + sin espacios extra
+// Sirve para que "cafe con leche" matchee con "Café con leche" y "CAFÉ CON  LECHE"
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // quita diacríticos (tildes, diéresis, etc.)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 import {
   Search,
   X,
@@ -71,7 +82,7 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
   }, [products])
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = normalize(search)
     return order
       .map((id) => products.find((p) => p.id === id))
       .filter(Boolean)
@@ -82,7 +93,7 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
         const productTags = p!.tags || []
         return activeTags.some((t) => productTags.includes(t))
       })
-      .filter((p) => (q ? p!.name.toLowerCase().includes(q) : true)) as Product[]
+      .filter((p) => (q ? normalize(p!.name).includes(q) : true)) as Product[]
   }, [order, products, search, activeTags])
 
   function toggleTag(tag: string) {
@@ -580,7 +591,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
   }, [products])
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = normalize(search)
     return order
       .map((id) => products.find((p) => p.id === id))
       .filter(Boolean)
@@ -591,7 +602,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
         const productTags = p!.tags || []
         return activeTags.some((t) => productTags.includes(t))
       })
-      .filter((p) => (q ? p!.name.toLowerCase().includes(q) : true)) as Product[]
+      .filter((p) => (q ? normalize(p!.name).includes(q) : true)) as Product[]
   }, [order, products, search, activeTags])
 
   function toggleTag(tag: string) {

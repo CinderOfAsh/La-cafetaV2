@@ -10,6 +10,7 @@ import {
   Check,
   AlertCircle,
   PanelRight,
+  Bell,
 } from 'lucide-react'
 import { AppHeader } from '@/components/AppHeader'
 import { Card, ModalShell, Badge, LoadingBlock, EmptyState } from '@/components/shared'
@@ -50,6 +51,10 @@ export function CalendarioView() {
   const [swapSource, setSwapSource] = useState<ShiftAssignment | null>(null) // my assignment I want to swap
   const [showSwapDialog, setShowSwapDialog] = useState(false) // controls the swap source dialog visibility
   const [targetAssignment, setTargetAssignment] = useState<ShiftAssignment | null>(null) // clicked target
+  // Cuando un día tiene 2 personas en modo 'selecting', mostramos un mini-popover
+  // para que el user elija A CUÁL de las dos le pide el cambio.
+  const [popoverShift, setPopoverShift] = useState<ShiftAssignment[] | null>(null) // array de 2 personas del día
+  const [popoverPos, setPopoverPos] = useState<{ x: number; y: number } | null>(null)
 
   // --- Pending swap requests (for the replacement user) ---
   const [pendingSwaps, setPendingSwaps] = useState<ShiftSwap[]>([])
@@ -58,6 +63,30 @@ export function CalendarioView() {
   // --- Response notifications (for the original user) ---
   const [responseSwaps, setResponseSwaps] = useState<ShiftSwap[]>([])
   const [activeResponseSwap, setActiveResponseSwap] = useState<ShiftSwap | null>(null)
+  // Swaps que el user recibió respuesta pero eligió "Más tarde" — los
+  // guardamos aquí (sin marcar como visto) para que aparezcan en el panel lateral
+  // y pueda reabrir la notificación cuando quiera.
+  // Persistimos en localStorage para que sobrevivan a recargas de página.
+  const [pendingResponseSwaps, setPendingResponseSwaps] = useState<ShiftSwap[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const raw = window.localStorage.getItem('lacafeta:pendingResponseSwaps')
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  })
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(
+        'lacafeta:pendingResponseSwaps',
+        JSON.stringify(pendingResponseSwaps)
+      )
+    } catch {
+      // ignore
+    }
+  }, [pendingResponseSwaps])
 
   // --- Review mode (for replacement reviewing a swap) ---
   const [reviewingSwap, setReviewingSwap] = useState<ShiftSwap | null>(null)
@@ -98,9 +127,10 @@ export function CalendarioView() {
       if (pending.length > 0 && !activePendingSwap) {
         setActivePendingSwap(pending[0])
       }
-      // Show first response if any
-      if (responses.length > 0 && !activeResponseSwap) {
-        setActiveResponseSwap(responses[0])
+      // Show first response if any (pero no mostrar los que ya están en "Más tarde")
+      const unseen = responses.filter((s) => !pendingResponseSwaps.find((p) => p.id === s.id))
+      if (unseen.length > 0 && !activeResponseSwap) {
+        setActiveResponseSwap(unseen[0])
       }
     } catch {
       toast.error('No se pudieron cargar los turnos')
@@ -254,12 +284,28 @@ export function CalendarioView() {
   }
 
   // Mark response as seen (original user)
-  async function markResponseSeen(swapId: string) {
+  // dismiss=true  → "Entendido", sale de la lista del panel lateral Y marca como visto en BD
+  // dismiss=false → "Más tarde", guarda en panel lateral local, NO marca como visto en BD
+  async function markResponseSeen(swapId: string, dismiss: boolean) {
     try {
-      await post(`/api/shift-swaps/${swapId}/mark-seen`, { as: 'original' })
-      setActiveResponseSwap(null)
+      if (dismiss) {
+        // "Entendido" → marcar como visto en BD (ya no aparecerá como "pendiente")
+        await post(`/api/shift-swaps/${swapId}/mark-seen`, { as: 'original' })
+      }
+      // En cualquier caso, quitamos del modal activo y de la lista "más tarde"
       setResponseSwaps((prev) => prev.filter((s) => s.id !== swapId))
-      loadData()
+      setPendingResponseSwaps((prev) => prev.filter((s) => s.id !== swapId))
+      setActiveResponseSwap(null)
+      if (!dismiss) {
+        // Si NO marcó como visto, lo guardamos en panel lateral local
+        // (la API lo seguirá devolviendo, pero el filtro local lo oculta del modal)
+        const swap = responseSwaps.find((s) => s.id === swapId)
+        if (swap) {
+          setPendingResponseSwaps((prev) =>
+            prev.find((s) => s.id === swapId) ? prev : [swap, ...prev]
+          )
+        }
+      }
     } catch {
       // ignore
     }
@@ -417,7 +463,7 @@ export function CalendarioView() {
                     return (
                       <div
                         key={idx}
-                        className={`aspect-square sm:aspect-[4/3] rounded-lg border p-1 sm:p-1.5 text-left flex flex-col gap-0.5 bg-card overflow-hidden ${
+                        className={`aspect-square sm:aspect-[3/4] rounded-lg border p-1 sm:p-1.5 text-left flex flex-col gap-0.5 bg-card overflow-hidden ${
                           isToday ? 'border-[color:var(--sage)]' : 'border-border'
                         }`}
                       >
@@ -443,13 +489,26 @@ export function CalendarioView() {
                             return (
                               <button
                                 key={shiftId}
-                                onClick={() => {
+                                onClick={(e) => {
                                   const clickable = calendarMode === 'normal' ? isMine : !isMine
-                                  if (clickable) {
+                                  if (!clickable) return
+                                  // Modo normal con tu turno: abre dialogo de solicitud
+                                  if (calendarMode === 'normal' && isMine) {
                                     handleShiftClick(arr.find((a) => a.userId === user.id) || arr[0])
+                                    return
                                   }
+                                  // Modo selecting: si hay 2 personas, abrimos popover
+                                  // para que el user elija a cuál le pide el cambio.
+                                  if (calendarMode === 'selecting' && arr.length > 1) {
+                                    const rect = e.currentTarget.getBoundingClientRect()
+                                    setPopoverPos({ x: rect.left, y: rect.bottom + 4 })
+                                    setPopoverShift(arr)
+                                    return
+                                  }
+                                  // 1 persona (o ninguna): comportamiento normal
+                                  handleShiftClick(arr[0])
                                 }}
-                                className={`block w-full text-left text-[9px] sm:text-[10px] leading-tight px-1 py-0.5 rounded truncate ${bgClass}`}
+                                className={`block w-full text-left text-[10px] sm:text-xs leading-snug px-1.5 py-1 rounded ${bgClass}`}
                                 title={arr.map((a) => `${a.user?.name} (${a.role})`).join(', ')}
                               >
                                 <span className="font-medium">{shift?.name}:</span>{' '}
@@ -493,6 +552,40 @@ export function CalendarioView() {
           </>
         )}
       </main>
+
+      {/* Popover para elegir A CUÁL de las 2 personas del turno pedir el cambio */}
+      {popoverShift && popoverPos && (
+        <>
+          {/* overlay invisible para cerrar el popover al clickar fuera */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => { setPopoverShift(null); setPopoverPos(null) }}
+          />
+          <div
+            className="fixed z-50 bg-card border border-border rounded-lg shadow-lg p-2 min-w-[220px]"
+            style={{ left: popoverPos.x, top: popoverPos.y }}
+            role="menu"
+          >
+            <p className="text-xs text-muted-foreground px-2 py-1">
+              ¿A quién le pides el cambio?
+            </p>
+            {popoverShift.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => {
+                  handleShiftClick(a)
+                  setPopoverShift(null)
+                  setPopoverPos(null)
+                }}
+                className="block w-full text-left px-3 py-2 rounded hover:bg-accent text-sm"
+              >
+                <span className="font-medium">{a.user?.name}</span>
+                <span className="ml-2 text-xs text-muted-foreground">({a.role})</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Swap source dialog — "¿Intercambiar este turno?" */}
       {showSwapDialog && swapSource && (
@@ -577,8 +670,66 @@ export function CalendarioView() {
       {activeResponseSwap && (
         <ResponseModal
           swap={activeResponseSwap}
-          onClose={() => markResponseSeen(activeResponseSwap.id)}
+          onDismiss={() => markResponseSeen(activeResponseSwap.id, true)}
+          onLater={() => markResponseSeen(activeResponseSwap.id, false)}
         />
+      )}
+
+      {/* Panel lateral: respuestas pendientes de ver (cuando el user le dio "Más tarde") */}
+      {pendingResponseSwaps.length > 0 && (
+        <aside
+          className="fixed right-4 bottom-4 z-30 w-72 bg-card border-2 border-[color:var(--sage)] rounded-lg shadow-xl p-4 max-h-[60vh] overflow-y-auto"
+          role="region"
+          aria-label="Solicitudes de turno pendientes"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[color:var(--sage)]" />
+              Solicitudes pendientes ({pendingResponseSwaps.length})
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {pendingResponseSwaps.map((s) => {
+              const approved = s.status === 'APPROVED'
+              return (
+                <div
+                  key={s.id}
+                  className={`p-2 rounded border text-xs ${
+                    approved
+                      ? 'border-sage/40 bg-[rgba(127,166,155,0.08)]'
+                      : 'border-[color:var(--warn)]/40 bg-[rgba(199,123,92,0.08)]'
+                  }`}
+                >
+                  <button
+                    onClick={() => setActiveResponseSwap(s)}
+                    className="w-full text-left hover:opacity-80"
+                  >
+                    <div className="font-medium text-foreground">
+                      {s.replacementUser?.name} {approved ? 'aceptó' : 'rechazó'} tu cambio
+                    </div>
+                    <div className="text-muted-foreground mt-0.5 truncate">
+                      {s.shiftAssignment?.shift?.name} ·{' '}
+                      {s.shiftAssignment?.date &&
+                        new Date(s.shiftAssignment.date + 'T00:00:00').toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => markResponseSeen(s.id, true)}
+                    className="mt-1 text-[10px] text-muted-foreground hover:text-foreground underline"
+                  >
+                    Marcar como visto
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-3 italic">
+            Click en una para reabrir
+          </p>
+        </aside>
       )}
     </>
   )
@@ -795,20 +946,25 @@ function ReviewPanel({
 
 function ResponseModal({
   swap,
-  onClose,
+  onDismiss,
+  onLater,
 }: {
   swap: ShiftSwap
-  onClose: () => void
+  onDismiss: () => void  // "Entendido" → marca como visto y desaparece
+  onLater: () => void    // "Más tarde" → guarda en panel lateral, NO marca como visto
 }) {
   const approved = swap.status === 'APPROVED'
   return (
     <ModalShell
       open
-      onClose={onClose}
+      onClose={onLater}  // cerrar con X = "más tarde"
       title={approved ? '¡Intercambio aprobado!' : 'Intercambio rechazado'}
       size="sm"
       footer={
-        <button className="btn-sage text-sm" onClick={onClose}>Entendido</button>
+        <>
+          <button className="btn-ghost text-sm" onClick={onLater}>Más tarde</button>
+          <button className="btn-sage text-sm" onClick={onDismiss}>Entendido</button>
+        </>
       }
     >
       <div className="text-center py-4">
@@ -820,7 +976,15 @@ function ResponseModal({
         {approved ? (
           <p className="font-serif text-xl text-sage">Enhorabuena mae, te dijeron que si</p>
         ) : (
-          <p className="font-serif text-xl text-[color:var(--warn)]">El diablo loco, te rechazaron la vaina</p>
+          <p className="font-serif text-xl text-[color:var(--warn)]">
+            {[
+              'El diablo loco, te rechazaron la vaina',
+              'La muhel mía dice que no te cambian el turno',
+              'MI loco te rechazaron y el cambio de turno tambien',
+              'Te han rechazado el intercambio manin mala suerte',
+              'Pringao, te quedaste sin cambio de turno',
+            ][Math.floor(Math.random() * 5)]}
+          </p>
         )}
         <p className="text-sm text-muted-foreground mt-3">
           {swap.replacementUser?.name} {approved ? 'aceptó' : 'rechazó'} tu solicitud de intercambio del turno{' '}
