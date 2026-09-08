@@ -2,9 +2,100 @@
 
 import { ReactNode, useState } from 'react'
 import { LoadingBlock, EmptyState, Spinner, PageHeader } from '@/components/ui-bits'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, GripVertical } from 'lucide-react'
 
 export { LoadingBlock, EmptyState, Spinner, PageHeader }
+
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+// Bromas del usuario que SIEMPRE van al final del desplegable, sin importar
+// el orden alfabético.
+export const TAG_JOKES = ['Agua Bendita', 'HUGO', 'ADRI', 'AITANA', 'NIÑOS']
+
+// =====================================================================
+// PACKS — definiciones de los productos hijos que el POS pregunta
+// al vender un pack. Cada pack tiene una lista de "grupos" (categorías
+// que el user debe elegir, ej: "Bocata", "Refresco") y cada grupo tiene
+// las opciones válidas (productos reales con su id en BD).
+// =====================================================================
+export interface PackOption {
+  productId: string         // id del producto hijo en la BD
+  productName: string       // nombre legible (cacheado, no se busca en cada render)
+  category: string          // etiqueta del modal (no se usa en el filtro)
+}
+export const PACK_DEFINITIONS: Record<string, { prompt: string; groups: { title: string; options: PackOption[] }[] }> = {
+  'Pack TLS': {
+    prompt: '¿Qué incluye el Pack TLS?',
+    groups: [
+      { title: 'Comida (Pincho)', options: [
+        { productId: '__PLACEHOLDER__Pincho tortilla', productName: 'Pincho tortilla', category: 'Pincho' },
+      ]},
+      { title: 'Bebida (Café o Refresco)', options: [
+        { productId: '__PLACEHOLDER__Café con leche pequeño', productName: 'Café con leche pequeño', category: 'Café' },
+        { productId: '__PLACEHOLDER__Coca-Cola', productName: 'Coca-Cola', category: 'Refresco' },
+      ]},
+    ],
+  },
+  'Pack Leny': {
+    prompt: '¿Qué incluye el Pack Leny?',
+    groups: [
+      { title: 'Comida (Gofre)', options: [
+        { productId: '__PLACEHOLDER__Gofre', productName: 'Gofre', category: 'Gofre' },
+        { productId: '__PLACEHOLDER__Gofre de chocolate', productName: 'Gofre de chocolate', category: 'Gofre' },
+      ]},
+      { title: 'Bebida (Café)', options: [
+        { productId: '__PLACEHOLDER__Café con leche pequeño', productName: 'Café con leche pequeño', category: 'Café' },
+      ]},
+    ],
+  },
+  'Pack LEINN': {
+    prompt: '¿Qué incluye el Pack LEINN?',
+    groups: [
+      { title: 'Bocata', options: [
+        { productId: '__PLACEHOLDER__Bocata lomo y queso', productName: 'Bocata lomo y queso', category: 'Bocata' },
+        { productId: '__PLACEHOLDER__Bocata jamón', productName: 'Bocata jamón', category: 'Bocata' },
+        { productId: '__PLACEHOLDER__Bocata tortilla', productName: 'Bocata tortilla', category: 'Bocata' },
+        { productId: '__PLACEHOLDER__Sandwich pavo y queso', productName: 'Sandwich pavo y queso', category: 'Bocata' },
+      ]},
+      { title: 'Refresco', options: [
+        { productId: '__PLACEHOLDER__Coca-Cola', productName: 'Coca-Cola', category: 'Refresco' },
+        { productId: '__PLACEHOLDER__Coca-Cola Zero', productName: 'Coca-Cola Zero', category: 'Refresco' },
+        { productId: '__PLACEHOLDER__Fanta de naranja', productName: 'Fanta de naranja', category: 'Refresco' },
+        { productId: '__PLACEHOLDER__Nestea', productName: 'Nestea', category: 'Refresco' },
+        { productId: '__PLACEHOLDER__Aquarius de limón', productName: 'Aquarius de limón', category: 'Refresco' },
+      ]},
+    ],
+  },
+  'Pack Bakr': {
+    prompt: '¿Qué incluye el Pack Bakr?',
+    groups: [
+      { title: 'Café', options: [
+        { productId: '__PLACEHOLDER__Café con leche pequeño', productName: 'Café con leche pequeño', category: 'Café' },
+        { productId: '__PLACEHOLDER__Café solo pequeño', productName: 'Café solo pequeño', category: 'Café' },
+      ]},
+      { title: 'Sándwich', options: [
+        { productId: '__PLACEHOLDER__Sandwich pavo y queso', productName: 'Sandwich pavo y queso', category: 'Sándwich' },
+        { productId: '__PLACEHOLDER__Croissant pavo y queso', productName: 'Croissant pavo y queso', category: 'Sándwich' },
+      ]},
+    ],
+  },
+}
 
 export interface BookmarkTab {
   id: string
@@ -43,108 +134,153 @@ export function BookmarkTabs({
   )
 }
 
-// Etiquetas por defecto que siempre se muestran en el POS
-// Coinciden con los tags que hay en la BD (minúsculas, sin tildes)
-export const DEFAULT_POS_TAGS = ['bocadillo', 'bebida', 'caliente', 'frio', 'salado', 'dulce']
-
+// POS tag tabs: solo 2 fijas ("Comida", "Bebida") + drag & drop para reordenar
+// + botón [+] que abre desplegable con todos los demás tags (ordenados
+// alfabéticamente con las bromas al final). El usuario puede añadir un tag
+// del desplegable y se cierra automáticamente. Todo se persiste en localStorage.
+//
+// Props:
+//   allTags:         todas las etiquetas que existen en los productos
+//   visibleOrder:    array de tags actualmente visibles (en el orden que el user ha elegido)
+//                    incluye siempre Comida y Bebida
+//   activeTags:      etiquetas que están activas como filtro
+//   onToggle(tag):   activa/desactiva una etiqueta
+//   onReorder(tags): cambia el orden (drag & drop)
+//   onAddFromHidden(tag): añade una etiqueta del desplegable a las visibles
 export function TagTabsMulti({
   allTags,
+  visibleOrder,
   activeTags,
   onToggle,
+  onReorder,
+  onAddFromHidden,
 }: {
-  allTags: string[]               // TODAS las etiquetas que existen en los productos
-  activeTags: string[]            // etiquetas actualmente seleccionadas (multi)
-  onToggle: (tag: string) => void  // toggle on/off
+  allTags: string[]
+  visibleOrder: string[]
+  activeTags: string[]
+  onToggle: (tag: string) => void
+  onReorder: (tags: string[]) => void
+  onAddFromHidden: (tag: string) => void
 }) {
   const [open, setOpen] = useState(false)
 
-  // Etiquetas visibles siempre (default + las que el usuario ha "fijado" añadiéndolas)
-  const pinned = activeTags.filter((t) => !DEFAULT_POS_TAGS.includes(t))
-  const visibleDefault = DEFAULT_POS_TAGS
-  const allVisible = [...visibleDefault, ...pinned]
+  // Tags ocultos: los que existen pero el user no ha añadido a las visibles.
+  // Orden: alfabético, pero las bromas al final.
+  const visibleSet = new Set(visibleOrder)
+  const hidden = allTags.filter((t) => !visibleSet.has(t))
+  const hiddenNormal = hidden.filter((t) => !TAG_JOKES.includes(t)).sort()
+  const hiddenJokes = TAG_JOKES.filter((t) => hidden.includes(t))
+  const hiddenOrdered = [...hiddenNormal, ...hiddenJokes]
 
-  // Etiquetas ocultas (las que existen pero el usuario no ha añadido)
-  const hidden = allTags.filter((t) => !allVisible.includes(t))
+  // Drag & drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
-  // Función interna: hace toggle y, si la etiqueta era hidden, la "fija" como pinned
-  // onToggle ya gestiona el estado global de activeTags; aquí solo nos aseguramos
-  // de que cuando se activa una etiqueta hidden, se abra el menú brevemente
-  // para confirmar visualmente.
-  function handleAddFromHidden(tag: string) {
-    if (!activeTags.includes(tag)) {
-      onToggle(tag)  // la activa (la pone visible)
-    }
-    // Mantenemos el menú abierto para que pueda añadir varias seguidas
+  function onDragEnd(e: DragEndEvent) {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const oldI = visibleOrder.indexOf(active.id as string)
+    const newI = visibleOrder.indexOf(over.id as string)
+    if (oldI === -1 || newI === -1) return
+    onReorder(arrayMove(visibleOrder, oldI, newI))
+  }
+
+  function handleAdd(tag: string) {
+    onAddFromHidden(tag)
+    // Cerramos el desplegable después de añadir
+    setOpen(false)
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-3">
-      {allVisible.map((tag) => {
-        const isActive = activeTags.includes(tag)
-        const isPinned = pinned.includes(tag)
-        return (
-          <div key={tag} className="flex items-center">
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={visibleOrder} strategy={horizontalListSortingStrategy}>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {visibleOrder.map((tag) => (
+            <SortableTag
+              key={tag}
+              tag={tag}
+              active={activeTags.includes(tag)}
+              onToggle={() => onToggle(tag)}
+            />
+          ))}
+          {/* Botón + — siempre a la derecha del todo, fijo (no draggable) */}
+          <div className="relative">
             <button
               type="button"
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => onToggle(tag)}
-              className={`bookmark-tab ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
-              title={isPinned ? 'Click para quitar (vuelve a estar oculta)' : 'Click para activar filtro'}
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-label="Añadir etiqueta"
+              className="bookmark-tab add-tag"
+              title="Añadir etiqueta"
             >
-              {tag}
+              <Plus className="w-3.5 h-3.5" />
             </button>
-            {isPinned && (
-              <button
-                type="button"
-                onClick={() => onToggle(tag)}  // la quita de activeTags → vuelve a estar oculta
-                aria-label={`Quitar ${tag}`}
-                className="ml-1 p-1 rounded hover:bg-accent text-muted-foreground"
+            {open && (
+              <div
+                className="absolute z-20 mt-2 right-0 bg-card border border-border rounded-md shadow-lg p-2 min-w-[180px] max-h-72 overflow-y-auto"
+                role="menu"
               >
-                <X className="w-3 h-3" />
-              </button>
+                {hiddenOrdered.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    No hay más etiquetas
+                  </div>
+                ) : (
+                  hiddenOrdered.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleAdd(tag)}
+                      className={`block w-full text-left px-3 py-1.5 rounded hover:bg-accent text-sm ${
+                        TAG_JOKES.includes(tag) ? 'italic text-muted-foreground' : ''
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))
+                )}
+              </div>
             )}
           </div>
-        )
-      })}
-      {/* Botón + para abrir el desplegable de etiquetas ocultas */}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-label="Añadir etiqueta"
-          className="bookmark-tab add-tag"
-          title="Añadir etiqueta"
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
-        {open && hidden.length > 0 && (
-          <div
-            className="absolute z-20 mt-2 left-0 bg-card border border-border rounded-md shadow-lg p-2 min-w-[160px] max-h-64 overflow-y-auto"
-            role="menu"
-          >
-            {hidden.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                role="menuitem"
-                onClick={() => handleAddFromHidden(tag)}
-                className="block w-full text-left px-3 py-1.5 rounded hover:bg-accent text-sm"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-        )}
-        {open && hidden.length === 0 && (
-          <div
-            className="absolute z-20 mt-2 left-0 bg-card border border-border rounded-md shadow-lg p-3 min-w-[160px] text-xs text-muted-foreground"
-          >
-            No hay más etiquetas
-          </div>
-        )}
-      </div>
+        </div>
+      </SortableContext>
+    </DndContext>
+  )
+}
+
+// Componente interno: una pestaña draggable
+function SortableTag({
+  tag,
+  active,
+  onToggle,
+}: {
+  tag: string
+  active: boolean
+  onToggle: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tag })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: 'grab',
+  }
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active}
+        onClick={onToggle}
+        className={`bookmark-tab flex items-center gap-1 ${active ? 'active' : ''}`}
+        {...listeners}
+        {...Object.fromEntries(Object.entries(attributes).filter(([k]) => k !== 'role'))}
+      >
+        <GripVertical className="w-3 h-3 opacity-50" />
+        {tag}
+      </button>
     </div>
   )
 }

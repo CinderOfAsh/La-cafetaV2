@@ -41,7 +41,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Card, ModalShell, Badge, LoadingBlock, EmptyState, TagTabsMulti } from '@/components/shared'
+import { Card, ModalShell, Badge, LoadingBlock, EmptyState, TagTabsMulti, PACK_DEFINITIONS } from '@/components/shared'
 import { get, post, put, del } from '@/lib/api'
 import { toast } from 'sonner'
 import { eur } from '@/lib/format'
@@ -62,10 +62,25 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
   const [order, setOrder] = useState<string[]>(() => products.map((p) => p.id))
   const [search, setSearch] = useState('')
   const [activeTags, setActiveTags] = useState<string[]>([])  // multi-tag
+  // Orden de las tabs visibles (Comida | Bebida + añadidas). Persistido en localStorage.
+  const [visibleOrder, setVisibleOrder] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return ['Comida', 'Bebida']
+    try {
+      const raw = window.localStorage.getItem('lacafeta:visibleOrder')
+      if (raw) return JSON.parse(raw)
+    } catch {}
+    return ['Comida', 'Bebida']
+  })
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { window.localStorage.setItem('lacafeta:visibleOrder', JSON.stringify(visibleOrder)) } catch {}
+  }, [visibleOrder])
   const [paymentModal, setPaymentModal] = useState<Product | null>(null)
   const [protocolModal, setProtocolModal] = useState<Protocol | null>(null)
   const [comandas, setComandas] = useState<SandboxComanda[]>([])
   const [protocols, setProtocols] = useState<Protocol[]>([])
+  // Estado de packs (sandbox): no descuenta stock, solo simula
+  const [packSelectModal, setPackSelectModal] = useState<Product | null>(null)
 
   useEffect(() => {
     setOrder(products.map((p) => p.id))
@@ -184,7 +199,14 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
       {/* Pizarra */}
       <div>
-        <TagTabsMulti allTags={tags} activeTags={activeTags} onToggle={toggleTag} />
+        <TagTabsMulti
+          allTags={tags}
+          visibleOrder={visibleOrder}
+          activeTags={activeTags}
+          onToggle={toggleTag}
+          onReorder={setVisibleOrder}
+          onAddFromHidden={(t) => setVisibleOrder((prev) => prev.includes(t) ? prev : [...prev, t])}
+        />
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
@@ -223,7 +245,14 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
                       draggable={!search && activeTags.length === 0}
                       hasProtocol={!!productProtocol}
                       onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
-                      onClick={() => setPaymentModal(p)}
+                      onClick={() => {
+                        // Si es pack, abrimos el modal de selección primero
+                        if (PACK_DEFINITIONS[p.name]) {
+                          setPackSelectModal(p)
+                        } else {
+                          setPaymentModal(p)
+                        }
+                      }}
                     />
                   )
                 })}
@@ -521,11 +550,29 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
   const [order, setOrder] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [activeTags, setActiveTags] = useState<string[]>([])  // multi-tag
+  // Orden de las tabs visibles (Comida | Bebida + añadidas). Persistido en localStorage.
+  const [visibleOrder, setVisibleOrder] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return ['Comida', 'Bebida']
+    try {
+      const raw = window.localStorage.getItem('lacafeta:visibleOrder')
+      if (raw) return JSON.parse(raw)
+    } catch {}
+    return ['Comida', 'Bebida']
+  })
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { window.localStorage.setItem('lacafeta:visibleOrder', JSON.stringify(visibleOrder)) } catch {}
+  }, [visibleOrder])
   const [paymentModal, setPaymentModal] = useState<Product | null>(null)
   const [protocolModal, setProtocolModal] = useState<Protocol | null>(null)
   const [comandas, setComandas] = useState<LiveComanda[]>([])
   const [loading, setLoading] = useState(true)
   const refreshTimer = useRef<number | null>(null)
+
+  // Estado para packs: cuando el user hace click en un pack, abrimos un modal
+  // que pregunta qué productos hijos incluye. Al confirmar, abrimos el modal
+  // de pago con la selección guardada.
+  const [packSelectModal, setPackSelectModal] = useState<Product | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -704,7 +751,14 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
       {/* Pizarra */}
       <div>
-        <TagTabsMulti allTags={tags} activeTags={activeTags} onToggle={toggleTag} />
+        <TagTabsMulti
+          allTags={tags}
+          visibleOrder={visibleOrder}
+          activeTags={activeTags}
+          onToggle={toggleTag}
+          onReorder={setVisibleOrder}
+          onAddFromHidden={(t) => setVisibleOrder((prev) => prev.includes(t) ? prev : [...prev, t])}
+        />
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
           <input
@@ -745,7 +799,14 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
                       draggable={!search && activeTags.length === 0}
                       hasProtocol={!!productProtocol}
                       onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
-                      onClick={() => setPaymentModal(p)}
+                      onClick={() => {
+                        // Si es pack, abrimos el modal de selección primero
+                        if (PACK_DEFINITIONS[p.name]) {
+                          setPackSelectModal(p)
+                        } else {
+                          setPaymentModal(p)
+                        }
+                      }}
                     />
                   )
                 })}
@@ -821,4 +882,97 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
       )}
     </div>
   )
+
+// ============ Modal: selección de productos hijos de un Pack ============
+function PackSelectModal({
+  pack,
+  products,
+  onClose,
+  onConfirm,
+}: {
+  pack: Product
+  products: Product[]
+  onClose: () => void
+  onConfirm: (selected: Product[]) => void
+}) {
+  const def = PACK_DEFINITIONS[pack.name]
+  if (!def) {
+    // No debería pasar porque solo abrimos este modal si PACK_DEFINITIONS lo tiene
+    onClose()
+    return null
+  }
+  // Estado: por cada grupo, qué productId está seleccionado
+  const [selected, setSelected] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+
+  function pick(groupTitle: string, productId: string) {
+    setSelected((prev) => ({ ...prev, [groupTitle]: productId }))
+    setError(null)
+  }
+
+  function confirm() {
+    // Verificar que cada grupo tiene una selección
+    for (const g of def.groups) {
+      if (!selected[g.title]) {
+        setError(`Falta elegir: ${g.title}`)
+        return
+      }
+    }
+    // Resolver productIds → Product objects reales (buscando por nombre en PACK_DEFINITIONS)
+    const result: Product[] = []
+    for (const g of def.groups) {
+      const productId = selected[g.title]
+      // Buscamos en PACK_DEFINITIONS por productName que coincida con el id guardado
+      const opt = g.options.find((o) => o.productId === productId)
+      if (!opt) continue
+      // Buscar el Product real por nombre
+      const real = products.find((p) => p.name === opt.productName)
+      if (real) result.push(real)
+    }
+    onConfirm(result)
+  }
+
+  return (
+    <ModalShell
+      open
+      onClose={onClose}
+      title={pack.name}
+      description={def.prompt + ` · ${eur(pack.price)}`}
+      size="md"
+    >
+      <div className="space-y-5">
+        {def.groups.map((g) => (
+          <div key={g.title}>
+            <h4 className="text-sm font-semibold mb-2">{g.title}</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {g.options.map((opt) => (
+                <button
+                  key={opt.productId}
+                  type="button"
+                  onClick={() => pick(g.title, opt.productId)}
+                  className={`text-left px-3 py-2 rounded border text-sm transition-colors ${
+                    selected[g.title] === opt.productId
+                      ? 'border-sage bg-[rgba(127,166,155,0.15)] text-foreground'
+                      : 'border-border hover:bg-accent'
+                  }`}
+                >
+                  {opt.productName}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {error && (
+          <p className="text-sm text-[color:var(--warn)]">{error}</p>
+        )}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button className="btn-ghost text-sm" onClick={onClose}>Cancelar</button>
+          <button className="btn-sage text-sm" onClick={confirm}>Confirmar</button>
+        </div>
+      </div>
+    </ModalShell>
+  )
+}
 }
