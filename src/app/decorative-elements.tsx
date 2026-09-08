@@ -1,20 +1,13 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
-
-function useMounted() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
-}
+import { useEffect, useState } from "react";
 
 export function DecorativeElements() {
-  const mounted = useMounted();
+  const [mounted, setMounted] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
+    setMounted(true);
     const handleMouse = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
