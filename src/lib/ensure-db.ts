@@ -213,7 +213,13 @@ async function doInit(db: PrismaClient) {
   // En Hostinger se mete como env var, redespliegas, y luego la quitas.
   if (process.env.FORCE_RESEED === 'true') {
     console.log('[ensureDb] FORCE_RESEED=true → borrando tablas de seed antes de re-sembrar')
-    // Orden: hijas primero (FK), madres al final
+    // Orden IMPORTANTE: borrar primero las hijas (que tienen FK a User/Product/etc),
+    // luego las madres. Si no, Prisma lanza "Foreign key constraint violated".
+    await db.protocolCompletion.deleteMany({})
+    await db.shiftSwap.deleteMany({})
+    await db.shiftAssignment.deleteMany({})
+    await db.shift.deleteMany({})
+    await db.protocol.deleteMany({})
     await db.purchaseItem.deleteMany({})
     await db.purchase.deleteMany({})
     await db.saleItem.deleteMany({})
@@ -222,13 +228,6 @@ async function doInit(db: PrismaClient) {
     await db.product.deleteMany({})
     await db.rawMaterial.deleteMany({})
     await db.user.deleteMany({})
-    // NO borramos Shift/Protocol/ShiftAssignment (datos estructurales creados
-    // por el usuario desde la web; descomenta si quieres resetearlos también).
-    // await db.protocolCompletion.deleteMany({})
-    // await db.protocol.deleteMany({})
-    // await db.shiftSwap.deleteMany({})
-    // await db.shiftAssignment.deleteMany({})
-    // await db.shift.deleteMany({})
   }
 
   // 3) Seed: usuarios legacy (Bullerre/Angel/Aitana) — solo si NO estamos en reseed
