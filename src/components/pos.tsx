@@ -88,10 +88,10 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
       .filter(Boolean)
       .filter((p) => {
         // Multi-tag: el producto sale si tiene AL MENOS UNA de las tags activas
-        // (lógica OR). Si no hay tags activas, se muestran todos.
+        // (lógica OR, case-insensitive). Si no hay tags activas, se muestran todos.
         if (activeTags.length === 0) return true
-        const productTags = p!.tags || []
-        return activeTags.some((t) => productTags.includes(t))
+        const productTagsLower = (p!.tags || []).map((t) => t.toLowerCase())
+        return activeTags.some((t) => productTagsLower.includes(t.toLowerCase()))
       })
       .filter((p) => (q ? normalize(p!.name).includes(q) : true)) as Product[]
   }, [order, products, search, activeTags])
@@ -597,10 +597,10 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
       .filter(Boolean)
       .filter((p) => {
         // Multi-tag: el producto sale si tiene AL MENOS UNA de las tags activas
-        // (lógica OR). Si no hay tags activas, se muestran todos.
+        // (lógica OR, case-insensitive). Si no hay tags activas, se muestran todos.
         if (activeTags.length === 0) return true
-        const productTags = p!.tags || []
-        return activeTags.some((t) => productTags.includes(t))
+        const productTagsLower = (p!.tags || []).map((t) => t.toLowerCase())
+        return activeTags.some((t) => productTagsLower.includes(t.toLowerCase()))
       })
       .filter((p) => (q ? normalize(p!.name).includes(q) : true)) as Product[]
   }, [order, products, search, activeTags])

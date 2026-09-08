@@ -44,7 +44,8 @@ export function BookmarkTabs({
 }
 
 // Etiquetas por defecto que siempre se muestran en el POS
-export const DEFAULT_POS_TAGS = ['Bocadillo', 'Bebida', 'Caliente', 'Frio', 'Salado', 'Dulce']
+// Coinciden con los tags que hay en la BD (minúsculas, sin tildes)
+export const DEFAULT_POS_TAGS = ['bocadillo', 'bebida', 'caliente', 'frio', 'salado', 'dulce']
 
 export function TagTabsMulti({
   allTags,
@@ -120,7 +121,7 @@ export function TagTabsMulti({
         </button>
         {open && hidden.length > 0 && (
           <div
-            className="absolute z-20 mt-2 left-0 bg-card border border-border rounded-md shadow-lg p-2 min-w-[160px]"
+            className="absolute z-20 mt-2 left-0 bg-card border border-border rounded-md shadow-lg p-2 min-w-[160px] max-h-64 overflow-y-auto"
             role="menu"
           >
             {hidden.map((tag) => (

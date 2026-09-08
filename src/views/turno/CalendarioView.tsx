@@ -451,7 +451,7 @@ export function CalendarioView() {
                 </div>
                 <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {monthCells.map((c, idx) => {
-                    if (!c.date) return <div key={idx} className="aspect-square sm:aspect-[4/3]" />
+                    if (!c.date) return <div key={idx} className="aspect-square sm:aspect-[3/2]" />
                     const dayAssignments = visibleAssignments.filter((a) => a.date === c.date)
                     const byShift = new Map<string, ShiftAssignment[]>()
                     for (const a of dayAssignments) {
@@ -463,7 +463,7 @@ export function CalendarioView() {
                     return (
                       <div
                         key={idx}
-                        className={`aspect-square sm:aspect-[3/4] rounded-lg border p-1 sm:p-1.5 text-left flex flex-col gap-0.5 bg-card overflow-hidden ${
+                        className={`aspect-square sm:aspect-[3/2] rounded-lg border p-1 sm:p-1.5 text-left flex flex-col gap-0.5 bg-card overflow-hidden ${
                           isToday ? 'border-[color:var(--sage)]' : 'border-border'
                         }`}
                       >
