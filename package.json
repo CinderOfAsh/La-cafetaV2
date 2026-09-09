@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "prisma generate && next build && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && python3 scripts/inject-no-cache.py",
+    "build": "prisma generate && next build && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/ && node scripts/inject-no-cache.mjs",
     "start": "prisma db push --accept-data-loss --skip-generate && NODE_ENV=production node .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
-    "inject-no-cache": "python3 scripts/inject-no-cache.py",
+    "inject-no-cache": "node scripts/inject-no-cache.mjs",
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
