@@ -206,6 +206,10 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
           onToggle={toggleTag}
           onReorder={setVisibleOrder}
           onAddFromHidden={(t) => setVisibleOrder((prev) => prev.includes(t) ? prev : [...prev, t])}
+          onRemoveVisible={(t) => {
+            setVisibleOrder((prev) => prev.filter((x) => x !== t))
+            setActiveTags((prev) => prev.filter((x) => x !== t))
+          }}
         />
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
@@ -758,6 +762,10 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
           onToggle={toggleTag}
           onReorder={setVisibleOrder}
           onAddFromHidden={(t) => setVisibleOrder((prev) => prev.includes(t) ? prev : [...prev, t])}
+          onRemoveVisible={(t) => {
+            setVisibleOrder((prev) => prev.filter((x) => x !== t))
+            setActiveTags((prev) => prev.filter((x) => x !== t))
+          }}
         />
         <div className="relative mb-4">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />

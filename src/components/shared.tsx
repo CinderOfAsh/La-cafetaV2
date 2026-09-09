@@ -154,6 +154,7 @@ export function TagTabsMulti({
   onToggle,
   onReorder,
   onAddFromHidden,
+  onRemoveVisible,
 }: {
   allTags: string[]
   visibleOrder: string[]
@@ -161,6 +162,7 @@ export function TagTabsMulti({
   onToggle: (tag: string) => void
   onReorder: (tags: string[]) => void
   onAddFromHidden: (tag: string) => void
+  onRemoveVisible: (tag: string) => void
 }) {
   const [open, setOpen] = useState(false)
 
@@ -188,9 +190,9 @@ export function TagTabsMulti({
   }
 
   function handleAdd(tag: string) {
+    // El menú NO se cierra automáticamente: el user puede añadir varios
+    // tags a la vez. Solo se cierra al sacar el cursor del menú (onMouseLeave).
     onAddFromHidden(tag)
-    // Cerramos el desplegable después de añadir
-    setOpen(false)
   }
 
   return (
@@ -203,10 +205,14 @@ export function TagTabsMulti({
               tag={tag}
               active={activeTags.includes(tag)}
               onToggle={() => onToggle(tag)}
+              onRemove={tag === 'Comida' || tag === 'Bebida' ? undefined : () => onRemoveVisible(tag)}
             />
           ))}
           {/* Botón + — siempre a la derecha del todo, fijo (no draggable) */}
-          <div className="relative">
+          <div
+            className="relative"
+            onMouseLeave={() => setOpen(false)}
+          >
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
@@ -255,10 +261,12 @@ function SortableTag({
   tag,
   active,
   onToggle,
+  onRemove,
 }: {
   tag: string
   active: boolean
   onToggle: () => void
+  onRemove?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tag })
   const style = {
@@ -280,6 +288,21 @@ function SortableTag({
       >
         <GripVertical className="w-3 h-3 opacity-50" />
         {tag}
+        {onRemove && (
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label={`Quitar etiqueta ${tag}`}
+            className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded hover:bg-[rgba(0,0,0,0.1)] text-xs leading-none"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+          >
+            ×
+          </span>
+        )}
       </button>
     </div>
   )
