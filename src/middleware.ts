@@ -18,12 +18,8 @@ export function middleware(request: NextRequest) {
 // Aplicar a TODAS las rutas (HTML + chunks)
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - api routes (mantener su cache-control actual)
-     * - _next/static (chunks estáticos, ya tienen hash en el nombre)
-     * - favicon.ico, robots.txt, sitemap.xml
-     */
     '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
   ],
+  // Forzar Node.js runtime (no edge, porque edge no funciona en Hostinger compartido)
+  runtime: 'nodejs',
 }
