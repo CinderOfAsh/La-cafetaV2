@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useState, useRef } from 'react'
 import { LoadingBlock, EmptyState, Spinner, PageHeader } from '@/components/ui-bits'
 import { Plus, X, GripVertical } from 'lucide-react'
 
@@ -165,6 +165,12 @@ export function TagTabsMulti({
   onRemoveVisible: (tag: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  // Referencia al wrapper relativo del boton + y al menu desplegable.
+  // Los usamos para chequear hover con setTimeout y dar margen al cursor.
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  // Timer id del cierre pendiente (para cancelar si el cursor vuelve a entrar)
+  const closeTimerRef = useRef<number | null>(null)
 
   // Tags ocultos: los que existen pero el user no ha añadido a las visibles.
   // Orden: alfabético, pero las bromas al final.
@@ -208,11 +214,33 @@ export function TagTabsMulti({
               onRemove={tag === 'Comida' || tag === 'Bebida' ? undefined : () => onRemoveVisible(tag)}
             />
           ))}
-          {/* Botón + — siempre a la derecha del todo, fijo (no draggable) */}
+          {/* Botón + — siempre a la derecha del todo, fijo (no draggable).
+              Usa un setTimeout para NO cerrar instantáneamente: si el cursor
+              vuelve a entrar al wrapper o al menú dentro de 200ms, cancelamos
+              el cierre. Esto da margen para trayectorias diagonales rápidas. */}
           <div
+            ref={wrapperRef}
             className="relative"
-            onMouseLeave={() => setOpen(false)}
+            onMouseLeave={() => {
+              // Programa el cierre dentro de 200ms. Si en ese tiempo el cursor
+              // vuelve a entrar al wrapper o al menú, cancelamos.
+              if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current)
+              closeTimerRef.current = window.setTimeout(() => {
+                const wrapperHover = wrapperRef.current?.matches(':hover')
+                const menuHover = menuRef.current?.matches(':hover')
+                if (!wrapperHover && !menuHover) setOpen(false)
+              }, 200)
+            }}
+            onMouseEnter={() => {
+              // Si el cursor vuelve al wrapper, cancela cualquier cierre pendiente
+              if (closeTimerRef.current) {
+                window.clearTimeout(closeTimerRef.current)
+                closeTimerRef.current = null
+              }
+            }}
           >
+            {/* Contenedor interno que contiene el botón y un puente invisible
+                cuando el menú está abierto. */}
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
@@ -224,8 +252,26 @@ export function TagTabsMulti({
               <Plus className="w-3.5 h-3.5" />
             </button>
             {open && (
+              <div className="h-2" aria-hidden />
+            )}
+            {open && (
               <div
-                className="absolute z-20 mt-2 right-0 bg-card border border-border rounded-md shadow-lg p-2 min-w-[180px] max-h-72 overflow-y-auto"
+                ref={menuRef}
+                onMouseEnter={() => {
+                  if (closeTimerRef.current) {
+                    window.clearTimeout(closeTimerRef.current)
+                    closeTimerRef.current = null
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current)
+                  closeTimerRef.current = window.setTimeout(() => {
+                    const wrapperHover = wrapperRef.current?.matches(':hover')
+                    const menuHover = menuRef.current?.matches(':hover')
+                    if (!wrapperHover && !menuHover) setOpen(false)
+                  }, 200)
+                }}
+                className="absolute z-20 top-full right-0 mt-1 bg-card border border-border rounded-md shadow-lg p-2 min-w-[180px] max-h-72 overflow-y-auto"
                 role="menu"
               >
                 {hiddenOrdered.length === 0 ? (
