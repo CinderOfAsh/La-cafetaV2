@@ -180,6 +180,23 @@ CREATE UNIQUE INDEX "ProductRecipe_productId_rawMaterialId_key" ON "ProductRecip
 -- CreateIndex
 CREATE UNIQUE INDEX "Protocol_productId_key" ON "Protocol"("productId");
 
+-- CreateTable (Report - agregado en Sep 2026)
+CREATE TABLE "Report" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'OPEN',
+    "seenByAdmin" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateIndex
+CREATE INDEX "Report_userId_idx" ON "Report"("userId");
+
+-- CreateIndex
+CREATE INDEX "Report_status_idx" ON "Report"("status");
 `
 
 // Mutex simple: garantiza que la inicialización solo corre una vez por proceso,
@@ -228,6 +245,7 @@ async function doInit(db: PrismaClient) {
     await db.product.deleteMany({})
     await db.rawMaterial.deleteMany({})
     await db.user.deleteMany({})
+    await db.report.deleteMany({})
   }
 
   // 3) Seed: usuarios legacy (Bullerre/Angel/Aitana) — solo si NO estamos en reseed
