@@ -1,0 +1,57 @@
+// Mapeo de productos a imagenes (Unsplash, URLs verificadas 200 OK)
+// Aplicado en BD Hostinger el 14 sep 2026 via SQL directo.
+// Si Bakr quiere cambiar una imagen, lo hace desde la UI de admin / Productos.
+export const PRODUCT_IMAGES: Record<string, string> = {
+  "Café con leche pequeño": "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400",
+  "Café con leche grande": "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400",
+  "Café solo pequeño": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400",
+  "Café solo grande": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400",
+  "Café americano pequeño": "https://images.unsplash.com/photo-1551030173-122aabc4489c?w=400",
+  "Café americano grande": "https://images.unsplash.com/photo-1551030173-122aabc4489c?w=400",
+  "Café sin lactosa pequeño": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400",
+  "Café sin lactosa grande": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400",
+  "ColaCao": "https://images.unsplash.com/photo-1517578239113-b03992dcdd25?w=400",
+  "ColaCao sin lactosa": "https://images.unsplash.com/photo-1517578239113-b03992dcdd25?w=400",
+  "Té": "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400",
+  "Agua": "https://images.unsplash.com/photo-1564419320461-6870880221ad?w=400",
+  "Coca-Cola": "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400",
+  "Coca-Cola Zero": "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400",
+  "Red Bull sin azúcar": "https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=400",
+  "Red Bull naranja": "https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=400",
+  "Red Bull blanco": "https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=400",
+  "Cerveza": "https://images.unsplash.com/photo-1535958636474-b021ee887b13?w=400",
+  "Fanta de naranja": "https://images.unsplash.com/photo-1624552184280-9e9631bbeee9?w=400",
+  "Aquarius de limón": "https://images.unsplash.com/photo-1437418747212-8d9709afab22?w=400",
+  "Nestea": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400",
+  "Sandwich pavo y queso": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400",
+  "Tostada mantequilla y mermelada": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400",
+  "Tostada tomate y aceite": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400",
+  "Tostada jamón": "https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400",
+  "Pincho tortilla": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400",
+  "Croissant a la plancha": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400",
+  "Croissant pavo y queso": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400",
+  "Bocata lomo y queso": "https://images.unsplash.com/photo-1509722747041-616f39b57569?w=400",
+  "Bocata jamón": "https://images.unsplash.com/photo-1509722747041-616f39b57569?w=400",
+  "Bocata tortilla": "https://images.unsplash.com/photo-1509722747041-616f39b57569?w=400",
+  "Gofre": "https://images.unsplash.com/photo-1562376552-0d160a2f238d?w=400",
+  "Pizza": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400",
+  "Palitos de queso": "https://images.unsplash.com/photo-1531749668029-2db88e4276c7?w=400",
+}
+
+// Productos de comida (no bebida, no pack) que llevan tag 'comida'
+// Aplicado en BD Hostinger el 14 sep 2026 via SQL directo.
+export const COMIDA_PRODUCTS: string[] = [
+  "Sandwich pavo y queso",
+  "Tostada mantequilla y mermelada",
+  "Tostada tomate y aceite",
+  "Tostada jamón",
+  "Pincho tortilla",
+  "Croissant a la plancha",
+  "Croissant pavo y queso",
+  "Bocata lomo y queso",
+  "Bocata jamón",
+  "Bocata tortilla",
+  "Gofre",
+  "Pizza",
+  "Palitos de queso",
+]
