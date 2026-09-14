@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import {
   Package,
   Users,
@@ -9,10 +10,16 @@ import {
   ArrowRight,
   UserCircle,
   Bug,
+  X,
+  CheckCircle2,
+  Trash2,
 } from 'lucide-react'
 import { useAppStore, type View } from '@/lib/store'
 import { AppHeader } from '@/components/AppHeader'
 import { PageHeader } from '@/components/ui-bits'
+import { ModalShell, Badge } from '@/components/shared'
+import { get, put, del } from '@/lib/api'
+import { toast } from 'sonner'
 
 interface HubCard {
   id: string
@@ -78,6 +85,57 @@ const cards: HubCard[] = [
 export function HubAdminView() {
   const setView = useAppStore((s) => s.setView)
   const user = useAppStore((s) => s.user)
+  const [popupReport, setPopupReport] = useState<{
+    id: string
+    title: string
+    description: string
+    userName: string
+    userEmail: string
+    createdAt: string
+  } | null>(null)
+
+  // Auto-popup del primer reporte no visto al cargar el hub admin
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const reports = await get<any[]>('/api/reports')
+        if (cancelled) return
+        const unseen = reports.find((r) => !r.seenByAdmin && r.status === 'OPEN')
+        if (unseen) {
+          setPopupReport({
+            id: unseen.id,
+            title: unseen.title,
+            description: unseen.description,
+            userName: unseen.user?.name || 'Desconocido',
+            userEmail: unseen.user?.email || '',
+            createdAt: unseen.createdAt,
+          })
+          // Marcar como visto (silencioso)
+          try { await put(`/api/reports/${unseen.id}`, { seenByAdmin: true }) } catch {}
+        }
+      } catch { /* ignore */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  async function setStatus(id: string, status: string) {
+    try {
+      await put(`/api/reports/${id}`, { status })
+      toast.success('Estado actualizado')
+    } catch {
+      toast.error('No se pudo actualizar')
+    }
+  }
+
+  async function removeReport(id: string) {
+    try {
+      await del(`/api/reports/${id}`)
+      toast.success('Reporte eliminado')
+    } catch {
+      toast.error('No se pudo eliminar')
+    }
+  }
 
   return (
     <>
@@ -114,6 +172,75 @@ export function HubAdminView() {
           })}
         </div>
       </main>
+
+      {/* Popup automatico de reporte nuevo */}
+      {popupReport && (
+        <ModalShell
+          open={!!popupReport}
+          onClose={() => setPopupReport(null)}
+          title="¡Nuevo reporte de bug!"
+          size="lg"
+        >
+          <div className="p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-accent text-sage flex items-center justify-center flex-shrink-0">
+                <Bug className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <Badge variant="warn">Abierto</Badge>
+                <h3 className="font-serif text-xl mt-2">{popupReport.title}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Reportado por <strong>{popupReport.userName}</strong>
+                  {popupReport.userEmail && (
+                    <span className="text-xs ml-1">({popupReport.userEmail})</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-muted/40 p-4 my-4 max-h-64 overflow-y-auto custom-scroll">
+              <p className="text-sm whitespace-pre-wrap">{popupReport.description}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                className="text-sm text-red-600 hover:text-red-700 inline-flex items-center gap-1 px-3 py-2"
+                onClick={() => {
+                  removeReport(popupReport.id)
+                  setPopupReport(null)
+                }}
+              >
+                <Trash2 className="w-4 h-4" /> Eliminar
+              </button>
+              <button
+                className="btn-secondary text-sm"
+                onClick={() => {
+                  setStatus(popupReport.id, 'DISMISSED')
+                  setPopupReport(null)
+                }}
+              >
+                Descartar
+              </button>
+              <button
+                className="btn-sage text-sm"
+                onClick={() => {
+                  setStatus(popupReport.id, 'RESOLVED')
+                  setPopupReport(null)
+                }}
+              >
+                <CheckCircle2 className="w-4 h-4" /> Marcar como resuelto
+              </button>
+            </div>
+
+            <button
+              onClick={() => setPopupReport(null)}
+              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </ModalShell>
+      )}
     </>
   )
 }
