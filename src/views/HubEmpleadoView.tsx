@@ -1,6 +1,6 @@
 'use client'
 
-import { ShoppingBag, Calendar, BarChart3, ArrowRight } from 'lucide-react'
+import { ShoppingBag, Calendar, BarChart3, ArrowRight, Bug } from 'lucide-react'
 import { useAppStore, type View } from '@/lib/store'
 import { AppHeader } from '@/components/AppHeader'
 import { PageHeader } from '@/components/ui-bits'
@@ -26,6 +26,13 @@ const cards: { id: string; title: string; description: string; icon: typeof Shop
     description: 'Tus ventas, métodos de pago y productividad.',
     icon: BarChart3,
     view: 'turno-dashboard',
+  },
+  {
+    id: 'reportes',
+    title: 'Reportes',
+    description: 'Reporta un bug o problema que hayas encontrado.',
+    icon: Bug,
+    view: 'turno-reportes',
   },
 ]
 

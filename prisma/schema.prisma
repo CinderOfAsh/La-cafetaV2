@@ -1,6 +1,7 @@
 // La Cafeta — Schema completo (v2)
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x"]
 }
 
 datasource db {
@@ -23,6 +24,7 @@ model User {
   saleTransactions  SaleTransaction[]
   originalSwaps     ShiftSwap[]       @relation("OriginalUser")
   replacementSwaps  ShiftSwap[]       @relation("ReplacementUser")
+  reports           Report[]
 }
 
 model Product {
@@ -194,4 +196,18 @@ model ProtocolCompletion {
   createdAt   DateTime @default(now())
 
   protocol Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+}
+
+// Reporte de bug enviado por un empleado al admin
+model Report {
+  id          String   @id @default(cuid())
+  userId      String   // empleado que envia el reporte
+  title       String   // titulo corto del bug
+  description String   // descripcion larga del bug
+  status      String   @default("OPEN") // OPEN | RESOLVED | DISMISSED
+  seenByAdmin Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

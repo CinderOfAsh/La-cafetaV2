@@ -8,6 +8,7 @@ import {
   FlaskConical,
   ArrowRight,
   UserCircle,
+  Bug,
 } from 'lucide-react'
 import { useAppStore, type View } from '@/lib/store'
 import { AppHeader } from '@/components/AppHeader'
@@ -64,6 +65,13 @@ const cards: HubCard[] = [
     description: 'Punto de venta de prueba para administrador.',
     icon: FlaskConical,
     view: 'admin-sandbox',
+  },
+  {
+    id: 'reportes',
+    title: 'Reportes de bugs',
+    description: 'Bugs reportados por los empleados. Resuélvelos o descártalos.',
+    icon: Bug,
+    view: 'admin-reportes',
   },
 ]
 

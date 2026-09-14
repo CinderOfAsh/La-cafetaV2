@@ -9,6 +9,7 @@ import { HubEmpleadoView } from '@/views/HubEmpleadoView'
 import { ProductosView } from '@/views/admin/ProductosView'
 import { PersonalView } from '@/views/admin/PersonalView'
 import { AsignarTurnosView } from '@/views/admin/AsignarTurnosView'
+import { AdminReportesView } from '@/views/admin/AdminReportesView'
 import { ProtocolosView } from '@/views/admin/ProtocolosView'
 import { DashboardView } from '@/views/admin/DashboardView'
 import { EmployeesView } from '@/views/admin/EmployeesView'
@@ -16,6 +17,7 @@ import { SandboxView } from '@/views/admin/SandboxView'
 import { TurnoView } from '@/views/turno/TurnoView'
 import { CalendarioView } from '@/views/turno/CalendarioView'
 import { DashboardEmpleadoView } from '@/views/turno/DashboardEmpleadoView'
+import { ReportesView } from '@/views/turno/ReportesView'
 import { LoadingBlock } from '@/components/ui-bits'
 import type { AuthUser } from '@/lib/types'
 
@@ -62,6 +64,8 @@ export default function Home() {
       return <PersonalView />
     case 'admin-asignar':
       return <AsignarTurnosView />
+    case 'admin-reportes':
+      return <AdminReportesView />
     case 'admin-protocolos':
       return <ProtocolosView />
     case 'admin-dashboard':
@@ -76,6 +80,8 @@ export default function Home() {
       return <CalendarioView />
     case 'turno-dashboard':
       return <DashboardEmpleadoView />
+    case 'turno-reportes':
+      return <ReportesView />
     default:
       return user.role === 'ADMIN' ? <HubAdminView /> : <HubEmpleadoView />
   }

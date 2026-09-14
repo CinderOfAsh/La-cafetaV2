@@ -97,6 +97,21 @@ export const PACK_DEFINITIONS: Record<string, { prompt: string; groups: { title:
   },
 }
 
+// =====================================================================
+// PACK_LOOKUP: helper para buscar un pack por nombre de producto
+// case-insensitive + trim (los nombres en BD pueden tener MAYÚSCULAS
+// distintas al seed, ej: "Pack LENY" vs "Pack Leny").
+// Devuelve la key normalizada si encuentra match, si no, undefined.
+// =====================================================================
+export function findPackDefinitionKey(productName: string | undefined | null): string | undefined {
+  if (!productName) return undefined
+  const target = productName.trim().toLowerCase()
+  for (const key of Object.keys(PACK_DEFINITIONS)) {
+    if (key.toLowerCase() === target) return key
+  }
+  return undefined
+}
+
 export interface BookmarkTab {
   id: string
   label: string

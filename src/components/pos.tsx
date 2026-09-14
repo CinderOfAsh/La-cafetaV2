@@ -41,7 +41,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Card, ModalShell, Badge, LoadingBlock, EmptyState, TagTabsMulti, PACK_DEFINITIONS } from '@/components/shared'
+import { Card, ModalShell, Badge, LoadingBlock, EmptyState, TagTabsMulti, PACK_DEFINITIONS, findPackDefinitionKey } from '@/components/shared'
 import { get, post, put, del } from '@/lib/api'
 import { toast } from 'sonner'
 import { eur } from '@/lib/format'
@@ -251,7 +251,7 @@ export function SandboxPizarra({ products }: { products: Product[] }) {
                       onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
                       onClick={() => {
                         // Si es pack, abrimos el modal de selección primero
-                        if (PACK_DEFINITIONS[p.name]) {
+                        if (findPackDefinitionKey(p.name)) {
                           setPackSelectModal(p)
                         } else {
                           setPaymentModal(p)
@@ -809,7 +809,7 @@ export function LivePizarra({ employeeId }: { employeeId: string }) {
                       onProtocol={() => productProtocol && setProtocolModal(productProtocol)}
                       onClick={() => {
                         // Si es pack, abrimos el modal de selección primero
-                        if (PACK_DEFINITIONS[p.name]) {
+                        if (findPackDefinitionKey(p.name)) {
                           setPackSelectModal(p)
                         } else {
                           setPaymentModal(p)
@@ -903,12 +903,14 @@ function PackSelectModal({
   onClose: () => void
   onConfirm: (selected: Product[]) => void
 }) {
-  const def = PACK_DEFINITIONS[pack.name]
-  if (!def) {
+  const defKey = findPackDefinitionKey(pack.name)
+  const defRaw = defKey ? PACK_DEFINITIONS[defKey] : undefined
+  if (!defRaw) {
     // No debería pasar porque solo abrimos este modal si PACK_DEFINITIONS lo tiene
     onClose()
     return null
   }
+  const def = defRaw
   // Estado: por cada grupo, qué productId está seleccionado
   const [selected, setSelected] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)

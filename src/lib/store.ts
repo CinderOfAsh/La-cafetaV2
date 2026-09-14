@@ -14,9 +14,11 @@ export type View =
   | 'admin-empleados'
   | 'admin-sandbox'
   | 'admin-asignar'
+  | 'admin-reportes'
   | 'turno'
   | 'turno-calendario'
   | 'turno-dashboard'
+  | 'turno-reportes'
 
 interface AppState {
   user: AuthUser | null
