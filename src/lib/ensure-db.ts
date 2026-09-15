@@ -192,11 +192,6 @@ CREATE TABLE "Report" (
     "updatedAt" DATETIME NOT NULL
 );
 
--- CreateIndex
-CREATE INDEX "Report_userId_idx" ON "Report"("userId");
-
--- CreateIndex
-CREATE INDEX "Report_status_idx" ON "Report"("status");
 `
 
 // Mutex simple: garantiza que la inicialización solo corre una vez por proceso,
